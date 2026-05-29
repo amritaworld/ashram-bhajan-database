@@ -1,87 +1,92 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { signUp } from '../config/supabase'
-import '../styles/Auth.css'
+import { supabase } from '../config/supabase'
 
 function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   const handleSignup = async (e) => {
     e.preventDefault()
-    setError(null)
-    setLoading(true)
+    setError('')
 
-    const { data, error: authError } = await signUp(email, password, fullName)
-
-    if (authError) {
-      setError(authError.message)
-    } else if (data.user) {
-      setSuccess(true)
-      setTimeout(() => navigate('/login'), 2000)
+    if (!email || !password || !confirmPassword) {
+      setError('All fields are required')
+      return
     }
 
-    setLoading(false)
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { error: signupError } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (signupError) {
+        setError(signupError.message)
+      } else {
+        // User created successfully
+        navigate('/login', { state: { message: 'Account created! Please log in.' } })
+      }
+    } catch (err) {
+      setError('An unexpected error occurred')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="auth-container">
-      <div className="auth-box">
-        <h1>Ashram Bhajan Database</h1>
-        <h2>Create Account</h2>
-
-        {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">Account created! Redirecting...</div>}
-
+      <div className="auth-card">
+        <h1>Create Account</h1>
         <form onSubmit={handleSignup}>
-          <div className="form-group">
-            <label htmlFor="fullName">Full Name</label>
-            <input
-              id="fullName"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              placeholder="Your full name"
-            />
-          </div>
+          {error && <div style={{ color: '#ff5c5c', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="your.email@example.com"
-            />
-          </div>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+          />
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </div>
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+          />
+
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+          />
 
           <button type="submit" disabled={loading}>
-            {loading ? 'Creating...' : 'Sign Up'}
+            {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
-        <p className="auth-link">
-          Already have account? <Link to="/login">Login</Link>
+        <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a7a7a7' }}>
+          Already have an account? <Link to="/login" style={{ color: '#d6a84f', textDecoration: 'none' }}>Login</Link>
         </p>
       </div>
     </div>

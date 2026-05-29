@@ -1,649 +1,427 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
-import '../styles/Form.css'
 
-function BhajanForm({ user, userRole }) {
-  const { id } = useParams()
+function BhajanForm() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(!!id)
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState(null)
-  const [editingIdx, setEditingIdx] = useState(null)
-
-  const [formData, setFormData] = useState({
-    name: '',
-    theme: '',
-    raga: '',
-    tala: '',
-    duration_minutes: '',
-    year_of_recording: new Date().getFullYear(),
-    copyright_holder: 'Mata Amritanandamayi Math',
-    copyright_status: 'pending',
-    license_type: 'proprietary',
-    status: 'draft',
-    internal_notes: ''
-  })
-
-  const [languages, setLanguages] = useState({
-    en: { lyrics: '', meaning: '' },
-    ml: { lyrics: '', meaning: '' }
-  })
-
-  const [contributors, setContributors] = useState([])
+  const { id } = useParams()
+  const [name, setName] = useState('')
+  const [theme, setTheme] = useState('')
+  const [raga, setRaga] = useState('')
+  const [tala, setTala] = useState('')
+  const [duration_minutes, setDuration] = useState('')
+  const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
+  const [lyrics_malayalam, setLyricsMalayalam] = useState('')
+  const [lyrics_english, setLyricsEnglish] = useState('')
+  const [meaning_malayalam, setMeaningMalayalam] = useState('')
+  const [meaning_english, setMeaningEnglish] = useState('')
+  const [status, setStatus] = useState('draft')
+  const [lyricists, setLyricists] = useState([''])
+  const [composers, setComposers] = useState([''])
+  const [singers, setSingers] = useState([''])
   const [audioFiles, setAudioFiles] = useState([])
-
-  const [newContributor, setNewContributor] = useState({
-    name: '',
-    role: 'lyricist',
-    specialization: '',
-    email: '',
-    phone: ''
-  })
-
-  const [newAudio, setNewAudio] = useState({
-    file: null,
-    quality: 'standard',
-    recording_date: new Date().toISOString().split('T')[0]
-  })
-
-  const [suggestions, setSuggestions] = useState({
-    themes: [],
-    ragas: [],
-    talas: []
-  })
+  const [uploadingAudio, setUploadingAudio] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState(null)
+  const [bhajanId, setBhajanId] = useState('')
 
   useEffect(() => {
-    fetchSuggestions()
-    if (id && userRole !== 'viewer') {
-      loadBhajanData()
-    } else {
-      setLoading(false)
-    }
-  }, [])
+    getUser()
+    if (id) loadBhajan()
+  }, [id])
 
-  const fetchSuggestions = async () => {
-    try {
-      const { data: bhajans } = await supabase
-        .from('bhajans')
-        .select('theme, raga, tala')
-        .neq('theme', null)
-
-      if (bhajans) {
-        const themes = [...new Set(bhajans.map(b => b.theme).filter(Boolean))]
-        const ragas = [...new Set(bhajans.map(b => b.raga).filter(Boolean))]
-        const talas = [...new Set(bhajans.map(b => b.tala).filter(Boolean))]
-
-        setSuggestions({ themes, ragas, talas })
-      }
-    } catch (err) {
-      console.error('Error fetching suggestions:', err)
-    }
+  const getUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    setUser(user)
   }
 
-  const loadBhajanData = async () => {
+  const generateBhajanId = (bhajanName) => {
+    return bhajanName
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 50)
+  }
+
+  const loadBhajan = async () => {
     setLoading(true)
-    try {
-      console.log('Loading bhajan with id:', id)
+    const { data } = await supabase
+      .from('bhajans')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-      const { data: bhajan, error: bhError } = await supabase
-        .from('bhajans')
-        .select('*')
-        .eq('id', id)
-        .single()
+    if (data) {
+      setBhajanId(data.bhajan_id)
+      setName(data.name || '')
+      setTheme(data.theme || '')
+      setRaga(data.raga || '')
+      setTala(data.tala || '')
+      setDuration(data.duration_minutes || '')
+      setYearOfRecording(data.year_of_recording || new Date().getFullYear())
 
-      if (bhError) {
-        console.error('Error loading bhajan:', bhError)
-        throw bhError
-      }
-      if (bhajan) {
-        console.log('Bhajan loaded:', bhajan)
-        setFormData(bhajan)
-      }
-
-      // Load languages
-      const { data: langs } = await supabase
-        .from('bhajan_languages')
-        .select('*')
-        .eq('bhajan_id', id)
-
-      console.log('Languages loaded:', langs)
-
-      if (langs && langs.length > 0) {
-        const langMap = {}
-        langs.forEach(lang => {
-          langMap[lang.language_code] = {
-            lyrics: lang.lyrics || '',
-            meaning: lang.meaning || ''
-          }
-        })
-        setLanguages(prev => ({ ...prev, ...langMap }))
+      try {
+        const lyricsData = typeof data.lyrics === 'string' ? JSON.parse(data.lyrics) : data.lyrics || {}
+        const meaningData = typeof data.meaning === 'string' ? JSON.parse(data.meaning) : data.meaning || {}
+        setLyricsMalayalam(lyricsData.malayalam || '')
+        setLyricsEnglish(lyricsData.english || '')
+        setMeaningMalayalam(meaningData.malayalam || '')
+        setMeaningEnglish(meaningData.english || '')
+      } catch (e) {
+        setLyricsMalayalam(data.lyrics || '')
+        setMeaningMalayalam(data.meaning || '')
       }
 
-      // Load writers
-      const { data: writers, error: wErr } = await supabase
+      setStatus(data.status || 'draft')
+
+      const { data: writersData } = await supabase
         .from('bhajan_writers')
         .select('*')
         .eq('bhajan_id', id)
 
-      console.log('Writers loaded:', writers, 'Error:', wErr)
+      if (writersData && writersData.length > 0) {
+        const lyricistsList = writersData.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name)
+        const composersList = writersData.filter(w => w.writer_role === 'composer').map(w => w.writer_name)
+        setLyricists(lyricistsList.length > 0 ? lyricistsList : [''])
+        setComposers(composersList.length > 0 ? composersList : [''])
+      }
 
-      // Load singers
-      const { data: singers, error: sErr } = await supabase
+      const { data: singersData } = await supabase
         .from('bhajan_singers')
         .select('*')
         .eq('bhajan_id', id)
-
-      console.log('Singers loaded:', singers, 'Error:', sErr)
-
-      const allContributors = []
-
-      if (writers && writers.length > 0) {
-        writers.forEach(w => {
-          allContributors.push({
-            dbId: w.id,
-            name: w.writer_name,
-            role: w.writer_role,
-            specialization: '',
-            email: w.contact_email || '',
-            phone: w.contact_phone || '',
-            type: 'writer',
-            isExisting: true
-          })
-        })
+      if (singersData && singersData.length > 0) {
+        setSingers(singersData.map(s => s.singer_name))
       }
 
-      if (singers && singers.length > 0) {
-        singers.forEach(s => {
-          allContributors.push({
-            dbId: s.id,
-            name: s.singer_name,
-            role: 'singer',
-            specialization: s.specialization || '',
-            email: s.contact_email || '',
-            phone: s.contact_phone || '',
-            type: 'singer',
-            isExisting: true
-          })
-        })
+      // Load audio files from storage
+      loadAudioFiles(data.bhajan_id)
+    }
+
+    setLoading(false)
+  }
+
+  const loadAudioFiles = async (bhajanId) => {
+    try {
+      console.log('Loading audio files for bhajan_id:', bhajanId)
+      const { data, error } = await supabase.storage
+        .from('bhajan-audio')
+        .list(bhajanId)
+
+      console.log('Storage list response:', { data, error })
+
+      if (error) {
+        console.error('Storage error:', error)
+        return
       }
 
-      console.log('Total contributors:', allContributors.length)
-      setContributors(allContributors)
-
-      // Load audio files
-      const { data: audios, error: aErr } = await supabase
-        .from('audio_files')
-        .select('*')
-        .eq('bhajan_id', id)
-
-      console.log('Audio files loaded:', audios, 'Error:', aErr)
-      if (audios && audios.length > 0) {
-        setAudioFiles(audios.map(a => ({ ...a, isExisting: true })))
+      if (data && data.length > 0) {
+        const files = data
+          .filter(file => file.name !== '.emptyFolderPlaceholder')
+          .map((file, idx) => ({
+            name: file.name,
+            path: `${bhajanId}/${file.name}`,
+            version: idx + 1
+          }))
+        console.log('Found audio files:', files)
+        setAudioFiles(files)
+      } else {
+        console.log('No audio files found')
       }
-
     } catch (err) {
-      console.error('Error loading bhajan:', err)
-      setError('Error: ' + err.message)
+      console.error('Error loading audio files:', err)
+    }
+  }
+
+  const handleAudioUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+
+    if (!name) {
+      alert('Please enter bhajan name first')
+      return
+    }
+
+    setUploadingAudio(true)
+    try {
+      const tempBhajanId = bhajanId || generateBhajanId(name)
+      console.log('Uploading to folder:', tempBhajanId)
+
+      for (const file of files) {
+        const fileName = `${Date.now()}-${file.name}`
+        const filePath = `${tempBhajanId}/${fileName}`
+
+        console.log('Uploading file:', filePath)
+
+        const { data, error } = await supabase.storage
+          .from('bhajan-audio')
+          .upload(filePath, file, { upsert: false })
+
+        console.log('Upload response:', { data, error })
+
+        if (error) {
+          console.error('Upload error details:', error)
+          throw error
+        }
+      }
+
+      alert('Audio files uploaded successfully!')
+      e.target.value = ''
+      if (id) {
+        loadAudioFiles(bhajanId)
+      }
+    } catch (err) {
+      console.error('Full error:', err)
+      alert('Error uploading audio: ' + err.message)
+    } finally {
+      setUploadingAudio(false)
+    }
+  }
+
+  const handleDeleteAudio = async (filePath) => {
+    if (window.confirm('Delete this audio file?')) {
+      try {
+        await supabase.storage.from('bhajan-audio').remove([filePath])
+        alert('Audio file deleted')
+        if (id) {
+          loadAudioFiles(bhajanId)
+        }
+      } catch (err) {
+        alert('Error deleting audio: ' + err.message)
+      }
+    }
+  }
+
+  const handleSave = async () => {
+    if (!name) {
+      alert('Enter bhajan name')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const generatedBhajanId = bhajanId || generateBhajanId(name)
+      const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
+      const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
+
+      let savedId = id
+
+      if (id) {
+        await supabase
+          .from('bhajans')
+          .update({
+            name, theme, raga, tala, duration_minutes, year_of_recording,
+            lyrics: JSON.stringify(lyricsObj),
+            meaning: JSON.stringify(meaningObj),
+            status,
+            updated_by: user?.id
+          })
+          .eq('id', id)
+
+        await supabase.from('bhajan_writers').delete().eq('bhajan_id', id)
+        await supabase.from('bhajan_singers').delete().eq('bhajan_id', id)
+      } else {
+        const { data, error } = await supabase
+          .from('bhajans')
+          .insert([{
+            bhajan_id: generatedBhajanId,
+            name, theme, raga, tala, duration_minutes, year_of_recording,
+            lyrics: JSON.stringify(lyricsObj),
+            meaning: JSON.stringify(meaningObj),
+            status,
+            created_by: user?.id
+          }])
+          .select()
+
+        if (error) throw error
+        if (!data || data.length === 0) throw new Error('No data returned')
+        savedId = data[0].id
+        setBhajanId(generatedBhajanId)
+      }
+
+      for (const lyricist of lyricists) {
+        if (lyricist.trim()) {
+          await supabase
+            .from('bhajan_writers')
+            .insert([{ bhajan_id: savedId, writer_name: lyricist, writer_role: 'lyricist' }])
+        }
+      }
+
+      for (const composer of composers) {
+        if (composer.trim()) {
+          await supabase
+            .from('bhajan_writers')
+            .insert([{ bhajan_id: savedId, writer_name: composer, writer_role: 'composer' }])
+        }
+      }
+
+      for (const singer of singers) {
+        if (singer.trim()) {
+          await supabase
+            .from('bhajan_singers')
+            .insert([{ bhajan_id: savedId, singer_name: singer }])
+        }
+      }
+
+      alert('Bhajan saved!')
+      navigate('/dashboard')
+    } catch (err) {
+      alert('Error: ' + err.message)
     }
     setLoading(false)
   }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleLanguageChange = (lang, field, value) => {
-    setLanguages(prev => ({
-      ...prev,
-      [lang]: { ...prev[lang], [field]: value }
-    }))
-  }
-
-  const addContributor = () => {
-    if (newContributor.name.trim()) {
-      setContributors([...contributors, {
-        ...newContributor,
-        dbId: null,
-        isExisting: false,
-        isNew: true
-      }])
-      setNewContributor({ name: '', role: 'lyricist', specialization: '', email: '', phone: '' })
-    }
-  }
-
-  const updateContributor = (index, field, value) => {
-    const updated = [...contributors]
-    updated[index][field] = value
-    setContributors(updated)
-  }
-
-  const deleteContributor = (index) => {
-    setContributors(contributors.filter((_, i) => i !== index))
-  }
-
-  const addAudioFile = () => {
-    if (newAudio.file) {
-      setAudioFiles([...audioFiles, {
-        ...newAudio,
-        dbId: null,
-        file_name: newAudio.file.name,
-        isExisting: false,
-        isNew: true
-      }])
-      setNewAudio({ file: null, quality: 'standard', recording_date: new Date().toISOString().split('T')[0] })
-    }
-  }
-
-  const updateAudioFile = (index, field, value) => {
-    const updated = [...audioFiles]
-    updated[index][field] = value
-    setAudioFiles(updated)
-  }
-
-  const deleteAudioFile = (index) => {
-    setAudioFiles(audioFiles.filter((_, i) => i !== index))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError(null)
-    setSubmitting(true)
-
-    try {
-      let bhajanId = id
-
-      if (id) {
-        console.log('Updating existing bhajan:', id)
-        const { error: updateError } = await supabase
-          .from('bhajans')
-          .update({ ...formData, updated_by: user.id })
-          .eq('id', id)
-
-        if (updateError) throw updateError
-      } else {
-        console.log('Creating new bhajan')
-        const bhajanIdStr = `BHJ-${Date.now()}`
-        const { data: newBhajan, error: insertError } = await supabase
-          .from('bhajans')
-          .insert([{
-            ...formData,
-            bhajan_id: bhajanIdStr,
-            created_by: user.id,
-            updated_by: user.id
-          }])
-          .select()
-          .single()
-
-        if (insertError) {
-          console.error('Bhajan insert error:', insertError)
-          throw insertError
-        }
-
-        console.log('New bhajan created with id:', newBhajan.id)
-        bhajanId = newBhajan.id
-
-        const langData = Object.entries(languages).map(([code, { lyrics, meaning }]) => ({
-          bhajan_id: newBhajan.id,
-          language_code: code,
-          language_name: code === 'en' ? 'English' : 'Malayalam',
-          lyrics,
-          meaning
-        }))
-
-        const { error: langError } = await supabase
-          .from('bhajan_languages')
-          .insert(langData)
-
-        if (langError) {
-          console.error('Language insert error:', langError)
-          throw langError
-        }
-
-        console.log('Languages saved')
-      }
-
-      console.log('Saving contributors. Total new:', contributors.filter(c => c.isNew).length)
-
-      // Save NEW contributors only
-      const newWriters = contributors
-        .filter(c => c.isNew && (c.type === 'writer' || c.role !== 'singer'))
-        .map(c => ({
-          bhajan_id: bhajanId,
-          writer_name: c.name,
-          writer_role: c.role,
-          contact_email: c.email || null,
-          contact_phone: c.phone || null,
-          created_by: user.id
-        }))
-
-      const newSingers = contributors
-        .filter(c => c.isNew && c.role === 'singer')
-        .map(c => ({
-          bhajan_id: bhajanId,
-          singer_name: c.name,
-          specialization: c.specialization || null,
-          contact_email: c.email || null,
-          contact_phone: c.phone || null,
-          created_by: user.id
-        }))
-
-      console.log('Writers to save:', newWriters)
-      console.log('Singers to save:', newSingers)
-
-      if (newWriters.length > 0) {
-        const { error: writerError, data: writerData } = await supabase
-          .from('bhajan_writers')
-          .insert(newWriters)
-
-        console.log('Writers insert result:', writerData, 'Error:', writerError)
-        if (writerError) throw writerError
-      }
-
-      if (newSingers.length > 0) {
-        const { error: singerError, data: singerData } = await supabase
-          .from('bhajan_singers')
-          .insert(newSingers)
-
-        console.log('Singers insert result:', singerData, 'Error:', singerError)
-        if (singerError) throw singerError
-      }
-
-      console.log('All data saved successfully!')
-      navigate('/dashboard')
-    } catch (err) {
-      console.error('Submit error:', err)
-      setError(err.message)
-    }
-
-    setSubmitting(false)
-  }
-
-  if (loading) return <div className="loading">Loading...</div>
-
   return (
     <div className="form-container">
-      <h1>{id ? 'Edit' : 'Add New'} Bhajan</h1>
+      <div className="form-card">
+        <h1>{id ? 'Edit Bhajan' : 'Add Bhajan'}</h1>
 
-      {error && <div className="error-message">{error}</div>}
-
-      {id && (contributors.length > 0 || audioFiles.length > 0) && (
-        <div className="info-banner">
-          📋 {contributors.length} contributor(s) | {audioFiles.length} audio file(s) — Scroll down to view/edit
+        <div className="form-group">
+          <label>Name *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bhajan name" />
         </div>
-      )}
 
-      <form onSubmit={handleSubmit} className="bhajan-form">
-        <fieldset>
-          <legend>Basic Information</legend>
-
+        <div className="form-row">
           <div className="form-group">
-            <label>Bhajan Name *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              placeholder="Enter bhajan name"
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Theme</label>
-              <input
-                type="text"
-                name="theme"
-                value={formData.theme}
-                onChange={handleInputChange}
-                placeholder="e.g., Krishna, Shiva"
-                list="theme-suggestions"
-              />
-              <datalist id="theme-suggestions">
-                {suggestions.themes.map(t => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
-            </div>
-
-            <div className="form-group">
-              <label>Raga</label>
-              <input
-                type="text"
-                name="raga"
-                value={formData.raga}
-                onChange={handleInputChange}
-                placeholder="e.g., Bhairav"
-                list="raga-suggestions"
-              />
-              <datalist id="raga-suggestions">
-                {suggestions.ragas.map(r => (
-                  <option key={r} value={r} />
-                ))}
-              </datalist>
-            </div>
-
-            <div className="form-group">
-              <label>Tala</label>
-              <input
-                type="text"
-                name="tala"
-                value={formData.tala}
-                onChange={handleInputChange}
-                placeholder="e.g., Adi Taalam"
-                list="tala-suggestions"
-              />
-              <datalist id="tala-suggestions">
-                {suggestions.talas.map(t => (
-                  <option key={t} value={t} />
-                ))}
-              </datalist>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Duration (minutes)</label>
-              <input
-                type="number"
-                name="duration_minutes"
-                value={formData.duration_minutes}
-                onChange={handleInputChange}
-                step="0.5"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Year of Recording</label>
-              <input
-                type="number"
-                name="year_of_recording"
-                value={formData.year_of_recording}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Contributors {contributors.length > 0 && <span className="count-badge">{contributors.length}</span>}</legend>
-
-          <div className="sub-section">
-            <h4>Add Contributor</h4>
-            <div className="form-row">
-              <input type="text" placeholder="Name *" value={newContributor.name} onChange={(e) => setNewContributor({...newContributor, name: e.target.value})} />
-              <select value={newContributor.role} onChange={(e) => setNewContributor({...newContributor, role: e.target.value})}>
-                <option value="lyricist">Lyricist</option>
-                <option value="composer">Composer</option>
-                <option value="singer">Singer</option>
-              </select>
-              <input type="text" placeholder="Specialization" value={newContributor.specialization} onChange={(e) => setNewContributor({...newContributor, specialization: e.target.value})} />
-              <input type="email" placeholder="Email" value={newContributor.email} onChange={(e) => setNewContributor({...newContributor, email: e.target.value})} />
-              <button type="button" onClick={addContributor} className="btn-add">+ Add</button>
-            </div>
-          </div>
-
-          {contributors.length > 0 && (
-            <div className="list-section">
-              <h4>Contributors ({contributors.length})</h4>
-              {contributors.map((c, idx) => (
-                <div key={idx}>
-                  {editingIdx === idx ? (
-                    <div className="edit-item">
-                      <div className="form-row">
-                        <input type="text" value={c.name} onChange={(e) => updateContributor(idx, 'name', e.target.value)} />
-                        <select value={c.role} onChange={(e) => updateContributor(idx, 'role', e.target.value)}>
-                          <option value="lyricist">Lyricist</option>
-                          <option value="composer">Composer</option>
-                          <option value="singer">Singer</option>
-                        </select>
-                        <input type="text" value={c.specialization} onChange={(e) => updateContributor(idx, 'specialization', e.target.value)} placeholder="Specialization" />
-                        <input type="email" value={c.email} onChange={(e) => updateContributor(idx, 'email', e.target.value)} />
-                      </div>
-                      <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)' }}>
-                        <button type="button" onClick={() => setEditingIdx(null)} className="btn-add">✓ Save</button>
-                        <button type="button" onClick={() => deleteContributor(idx)} className="btn-remove">✕ Delete</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="list-item">
-                      <div><strong>{c.name}</strong> <span className="contributor-role">• {c.role}</span> {c.specialization && <span className="contributor-spec">• {c.specialization}</span>}</div>
-                      <div className="list-actions">
-                        <button type="button" onClick={() => setEditingIdx(idx)} className="btn-edit">Edit</button>
-                        <button type="button" onClick={() => deleteContributor(idx)} className="btn-remove">Delete</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </fieldset>
-
-        <fieldset>
-          <legend>Audio Files {audioFiles.length > 0 && <span className="count-badge">{audioFiles.length}/5</span>}</legend>
-
-          <div className="sub-section">
-            <h4>Add Audio File</h4>
-            <div className="form-row">
-              <input type="file" accept="audio/*" onChange={(e) => setNewAudio({...newAudio, file: e.target.files[0]})} />
-              <select value={newAudio.quality} onChange={(e) => setNewAudio({...newAudio, quality: e.target.value})}>
-                <option value="low">Low</option>
-                <option value="standard">Standard</option>
-                <option value="high">High</option>
-              </select>
-              <input type="date" value={newAudio.recording_date} onChange={(e) => setNewAudio({...newAudio, recording_date: e.target.value})} />
-              <button type="button" onClick={addAudioFile} className="btn-add" disabled={audioFiles.length >= 5}>+ Add</button>
-            </div>
-          </div>
-
-          {audioFiles.length > 0 && (
-            <div className="list-section">
-              <h4>Audio Files ({audioFiles.length}/5)</h4>
-              {audioFiles.map((a, idx) => (
-                <div key={idx}>
-                  {editingIdx === idx + 100 ? (
-                    <div className="edit-item">
-                      <div className="form-row">
-                        <select value={a.quality} onChange={(e) => updateAudioFile(idx, 'quality', e.target.value)}>
-                          <option value="low">Low</option>
-                          <option value="standard">Standard</option>
-                          <option value="high">High</option>
-                        </select>
-                        <input type="date" value={a.recording_date} onChange={(e) => updateAudioFile(idx, 'recording_date', e.target.value)} />
-                      </div>
-                      <div style={{ marginTop: 'var(--space-md)', display: 'flex', gap: 'var(--space-sm)' }}>
-                        <button type="button" onClick={() => setEditingIdx(null)} className="btn-add">✓ Save</button>
-                        <button type="button" onClick={() => deleteAudioFile(idx)} className="btn-remove">✕ Delete</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="list-item">
-                      <span><strong>{a.file_name}</strong> • {a.quality} • {a.recording_date}</span>
-                      <div className="list-actions">
-                        <button type="button" onClick={() => setEditingIdx(idx + 100)} className="btn-edit">Edit</button>
-                        <button type="button" onClick={() => deleteAudioFile(idx)} className="btn-remove">Delete</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </fieldset>
-
-        <fieldset>
-          <legend>Lyrics & Meaning (English)</legend>
-          <div className="form-group">
-            <label>Lyrics</label>
-            <textarea value={languages.en?.lyrics || ''} onChange={(e) => handleLanguageChange('en', 'lyrics', e.target.value)} placeholder="Enter English lyrics" rows="6" />
+            <label>Theme</label>
+            <input value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="Theme" />
           </div>
           <div className="form-group">
-            <label>Meaning</label>
-            <textarea value={languages.en?.meaning || ''} onChange={(e) => handleLanguageChange('en', 'meaning', e.target.value)} placeholder="Enter English meaning" rows="4" />
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Lyrics & Meaning (Malayalam)</legend>
-          <div className="form-group">
-            <label>Lyrics</label>
-            <textarea value={languages.ml?.lyrics || ''} onChange={(e) => handleLanguageChange('ml', 'lyrics', e.target.value)} placeholder="Enter Malayalam lyrics" rows="6" />
+            <label>Raga</label>
+            <input value={raga} onChange={(e) => setRaga(e.target.value)} placeholder="Raga" />
           </div>
           <div className="form-group">
-            <label>Meaning</label>
-            <textarea value={languages.ml?.meaning || ''} onChange={(e) => handleLanguageChange('ml', 'meaning', e.target.value)} placeholder="Enter Malayalam meaning" rows="4" />
+            <label>Tala</label>
+            <input value={tala} onChange={(e) => setTala(e.target.value)} placeholder="Tala" />
           </div>
-        </fieldset>
+        </div>
 
-        <fieldset>
-          <legend>Copyright Information</legend>
+        <div className="form-row">
           <div className="form-group">
-            <label>Copyright Holder</label>
-            <input type="text" value={formData.copyright_holder} onChange={(e) => setFormData({...formData, copyright_holder: e.target.value})} placeholder="Mata Amritanandamayi Math" />
+            <label>Duration (min)</label>
+            <input type="number" value={duration_minutes} onChange={(e) => setDuration(e.target.value)} step="0.1" />
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Copyright Status</label>
-              <select name="copyright_status" value={formData.copyright_status} onChange={handleInputChange}>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>License Type</label>
-              <select name="license_type" value={formData.license_type} onChange={handleInputChange}>
-                <option value="proprietary">Proprietary</option>
-                <option value="cc-by">Creative Commons BY</option>
-                <option value="cc-by-sa">Creative Commons BY-SA</option>
-              </select>
-            </div>
+          <div className="form-group">
+            <label>Year of Recording</label>
+            <input type="number" value={year_of_recording} onChange={(e) => setYearOfRecording(e.target.value)} />
           </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Publication Status</legend>
           <div className="form-group">
             <label>Status</label>
-            <select name="status" value={formData.status} onChange={handleInputChange}>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="draft">Draft</option>
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
           </div>
-          <div className="form-group">
-            <label>Internal Notes</label>
-            <textarea name="internal_notes" value={formData.internal_notes} onChange={handleInputChange} placeholder="Private notes for admin only" rows="3" />
+        </div>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyrics</h2>
+        <div className="form-group">
+          <label>Malayalam</label>
+          <textarea value={lyrics_malayalam} onChange={(e) => setLyricsMalayalam(e.target.value)} rows="5" placeholder="Malayalam lyrics" />
+        </div>
+
+        <div className="form-group">
+          <label>English</label>
+          <textarea value={lyrics_english} onChange={(e) => setLyricsEnglish(e.target.value)} rows="5" placeholder="English lyrics" />
+        </div>
+
+        <h2 style={{ marginBottom: '1rem' }}>Meaning & Translation</h2>
+        <div className="form-group">
+          <label>Malayalam</label>
+          <textarea value={meaning_malayalam} onChange={(e) => setMeaningMalayalam(e.target.value)} rows="4" placeholder="Malayalam meaning" />
+        </div>
+
+        <div className="form-group">
+          <label>English</label>
+          <textarea value={meaning_english} onChange={(e) => setMeaningEnglish(e.target.value)} rows="4" placeholder="English meaning/translation" />
+        </div>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyricists</h2>
+        {lyricists.map((lyricist, idx) => (
+          <div key={idx} className="contributor-item">
+            <input value={lyricist} onChange={(e) => {
+              const newLyricists = [...lyricists]
+              newLyricists[idx] = e.target.value
+              setLyricists(newLyricists)
+            }} placeholder="Lyricist name" />
+            {lyricists.length > 1 && (
+              <button onClick={() => setLyricists(lyricists.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
+            )}
           </div>
-        </fieldset>
+        ))}
+        <button onClick={() => setLyricists([...lyricists, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Lyricist</button>
+
+        <h2 style={{ marginBottom: '1rem' }}>Composers</h2>
+        {composers.map((composer, idx) => (
+          <div key={idx} className="contributor-item">
+            <input value={composer} onChange={(e) => {
+              const newComposers = [...composers]
+              newComposers[idx] = e.target.value
+              setComposers(newComposers)
+            }} placeholder="Composer name" />
+            {composers.length > 1 && (
+              <button onClick={() => setComposers(composers.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
+            )}
+          </div>
+        ))}
+        <button onClick={() => setComposers([...composers, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Composer</button>
+
+        <h2 style={{ marginBottom: '1rem' }}>Singers</h2>
+        {singers.map((singer, idx) => (
+          <div key={idx} className="contributor-item">
+            <input value={singer} onChange={(e) => {
+              const newSingers = [...singers]
+              newSingers[idx] = e.target.value
+              setSingers(newSingers)
+            }} placeholder="Singer name" />
+            {singers.length > 1 && (
+              <button onClick={() => setSingers(singers.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
+            )}
+          </div>
+        ))}
+        <button onClick={() => setSingers([...singers, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Singer</button>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Audio Files</h2>
+        <div className="form-group">
+          <label>Upload Audio (MP3, WAV, etc)</label>
+          <input
+            type="file"
+            accept="audio/*"
+            multiple
+            onChange={handleAudioUpload}
+            disabled={uploadingAudio}
+          />
+        </div>
+        {uploadingAudio && <p style={{ color: '#d6a84f' }}>Uploading...</p>}
+
+        {audioFiles.length > 0 && (
+          <div className="audio-list">
+            <h3>Audio Files</h3>
+            {audioFiles.map((audio, idx) => (
+              <div key={idx} className="audio-item">
+                <div className="audio-info">
+                  <p className="audio-name">V{audio.version}: {audio.name}</p>
+                  <audio controls style={{ marginTop: '0.5rem', width: '100%' }}>
+                    <source src={supabase.storage.from('bhajan-audio').getPublicUrl(audio.path).data.publicUrl} />
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+                <button onClick={() => handleDeleteAudio(audio.path)} className="btn-delete">Delete</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="form-actions">
-          <button type="submit" disabled={submitting} className="btn-primary">{submitting ? 'Saving...' : 'Save Bhajan'}</button>
-          <button type="button" onClick={() => navigate('/dashboard')} className="btn-secondary">Cancel</button>
+          <button onClick={handleSave} disabled={loading || uploadingAudio} className="btn-primary">
+            {loading ? 'Saving...' : id ? 'Update' : 'Create'}
+          </button>
+          <button onClick={() => navigate('/dashboard')} className="btn-secondary">
+            Cancel
+          </button>
         </div>
-      </form>
+      </div>
     </div>
   )
 }

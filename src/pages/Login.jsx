@@ -1,71 +1,59 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { signIn } from '../config/supabase'
-import '../styles/Auth.css'
+import { supabase } from '../config/supabase'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setError(null)
+    setError('')
     setLoading(true)
 
-    const { data, error: authError } = await signIn(email, password)
+    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
 
-    if (authError) {
-      setError(authError.message)
-    } else if (data.user) {
+    if (loginError) {
+      setError(loginError.message)
+    } else {
       navigate('/dashboard')
     }
-
     setLoading(false)
   }
 
   return (
     <div className="auth-container">
-      <div className="auth-box">
-        <h1>Ashram Bhajan Database</h1>
-        <h2>Login</h2>
-
-        {error && <div className="error-message">{error}</div>}
-
+      <div className="auth-card">
+        <h1>Bhajans Portal</h1>
         <form onSubmit={handleLogin}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="your.email@example.com"
-            />
-          </div>
+          {error && <div style={{ color: '#ff5c5c', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </div>
-
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={loading}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+          />
           <button type="submit" disabled={loading}>
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <p className="auth-link">
-          Don't have an account? <Link to="/signup">Sign up</Link>
+        <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.875rem', color: '#a7a7a7' }}>
+          Don't have an account? <Link to="/signup" style={{ color: '#d6a84f', textDecoration: 'none' }}>Sign Up</Link>
         </p>
       </div>
     </div>

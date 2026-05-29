@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import '../styles/Admin.css'
 
 function UserManagement({ user }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const navigate = useNavigate()
-
-  const [newUser, setNewUser] = useState({
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: '',
     role: 'viewer'
   })
 
@@ -22,47 +17,40 @@ function UserManagement({ user }) {
   }, [])
 
   const fetchUsers = async () => {
-    const { data, error: fetchError } = await supabase
+    setLoading(true)
+    const { data, error } = await supabase
       .from('users')
       .select('*')
       .order('created_at', { ascending: false })
-    
-    if (!fetchError) {
+
+    if (!error) {
       setUsers(data || [])
     }
     setLoading(false)
   }
 
-  const handleChangeRole = async (userId, newRole) => {
-    const { error } = await supabase
-      .from('users')
-      .update({ role: newRole })
-      .eq('id', userId)
-
-    if (!error) {
-      await fetchUsers()
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   const handleCreateUser = async (e) => {
     e.preventDefault()
-    setError(null)
-    setSuccess(null)
 
-    if (!newUser.email || !newUser.password || !newUser.fullName) {
-      setError('Please fill all fields')
+    if (!formData.email || !formData.password) {
+      alert('Please fill in all fields')
       return
     }
 
+    setLoading(true)
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            full_name: newUser.fullName
-          }
-        }
+      const { data: { user: newUser }, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        email_confirm: true
       })
 
       if (authError) throw authError
@@ -70,128 +58,151 @@ function UserManagement({ user }) {
       const { error: dbError } = await supabase
         .from('users')
         .insert([{
-          id: authData.user.id,
-          email: newUser.email,
-          full_name: newUser.fullName,
-          role: newUser.role,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          id: newUser.id,
+          email: formData.email,
+          role: formData.role
         }])
 
       if (dbError) throw dbError
 
-      setSuccess(`User "${newUser.fullName}" created with role: ${newUser.role}`)
-      setNewUser({ email: '', password: '', fullName: '', role: 'viewer' })
+      alert('User created successfully!')
+      setFormData({ email: '', password: '', role: 'viewer' })
+      setShowForm(false)
       await fetchUsers()
-
-      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err.message)
+      alert('Error creating user: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteUser = async (userId, userEmail) => {
+    if (userId === user.id) {
+      alert('You cannot delete your own account')
+      return
+    }
+
+    if (window.confirm(`Delete user ${userEmail}?`)) {
+      try {
+        await supabase.from('users').delete().eq('id', userId)
+        await fetchUsers()
+        alert('User deleted successfully')
+      } catch (err) {
+        alert('Error deleting user: ' + err.message)
+      }
     }
   }
 
   return (
     <div className="admin-container">
-      <button onClick={() => navigate('/dashboard')} className="back-button">← Back to Dashboard</button>
-      
-      <h1>User Management</h1>
-
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">✓ {success}</div>}
-
-      <div className="add-user-form">
-        <h3>Create New User</h3>
-        <form onSubmit={handleCreateUser}>
-          <div className="form-group">
-            <label>Full Name</label>
-            <input
-              type="text"
-              value={newUser.fullName}
-              onChange={(e) => setNewUser({...newUser, fullName: e.target.value})}
-              placeholder="User's full name"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={newUser.email}
-              onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-              placeholder="user@example.com"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={newUser.password}
-              onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-              placeholder="Strong password"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Role</label>
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-            >
-              <option value="viewer">Viewer</option>
-              <option value="contributor">Contributor</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <button type="submit" className="btn-primary">+ Create User</button>
-        </form>
+      <div className="admin-header">
+        <h1>User Management</h1>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="btn-primary"
+        >
+          {showForm ? 'Cancel' : '+ Create User'}
+        </button>
       </div>
 
-      <h2 style={{ marginTop: 'var(--space-2xl)' }}>All Users</h2>
+      {showForm && (
+        <div className="admin-form">
+          <h2>Create New User</h2>
+          <form onSubmit={handleCreateUser}>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="user@example.com"
+                required
+              />
+            </div>
 
-      <div className="users-table">
-        {loading ? (
-          <div className="loading">Loading...</div>
-        ) : (
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Enter password"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Role</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleInputChange}
+              >
+                <option value="viewer">Viewer</option>
+                <option value="contributor">Contributor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <div className="form-actions">
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading ? 'Creating...' : 'Create User'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="loading">Loading users...</div>
+      ) : users.length === 0 ? (
+        <div className="no-results">No users found. Create one to get started!</div>
+      ) : (
+        <div className="users-table">
           <table>
             <thead>
               <tr>
-                <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
+                <th>Created At</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map(u => (
                 <tr key={u.id}>
-                  <td>{u.full_name}</td>
                   <td>{u.email}</td>
                   <td>
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleChangeRole(u.id, e.target.value)}
-                      disabled={u.id === user.id}
-                    >
-                      <option value="viewer">Viewer</option>
-                      <option value="contributor">Contributor</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    <span className={`badge badge-${u.role}`}>
+                      {u.role.toUpperCase()}
+                    </span>
                   </td>
-                  <td>{u.status}</td>
                   <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDeleteUser(u.id, u.email)}
+                      className="btn-delete"
+                      disabled={u.id === user.id}
+                      title={u.id === user.id ? 'Cannot delete own account' : 'Delete user'}
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -9,7 +9,9 @@
       "Bash(npx create-vite@latest .vite-tmp --template react --no-interactive)",
       "Bash(xattr .vite-tmp/.gitignore)",
       "Bash(npm install *)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(rm -rf src)",
+      "Bash(mkdir -p src/config src/pages)"
     ]
   }
 }
