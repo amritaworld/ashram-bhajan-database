@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase, getCurrentUser, getUserRole } from './config/supabase'
@@ -8,6 +10,7 @@ import './App.css'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
+import ThemeManagement from './pages/ThemeManagement'
 import BhajanForm from './pages/BhajanForm'
 import UserManagement from './pages/UserManagement'
 
@@ -74,7 +77,10 @@ function App() {
             <Route path="/bhajan/new" element={<BhajanForm user={user} userRole={userRole} />} />
             <Route path="/bhajan/:id/edit" element={<BhajanForm user={user} userRole={userRole} />} />
             <Route path="/users" element={userRole === 'admin' ? <UserManagement user={user} /> : <Navigate to="/dashboard" />} />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
+            {(userRole === 'admin') && (
+  <Route path="/themes" element={<ThemeManagement user={user} />} />
+)}
+<Route path="*" element={<Navigate to="/dashboard" />} />
           </>
         )}
       </Routes>

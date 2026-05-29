@@ -105,7 +105,9 @@ function Dashboard({ user, userRole, isDarkMode, onToggleDarkMode }) {
           )}
           {userRole === 'admin' && (
             <button onClick={() => navigate('/users')} className="nav-button">Users</button>
-          )}
+          )}{userRole === 'admin' && (
+  <button onClick={() => navigate('/themes')} className="nav-button">🎨 Manage Themes</button>
+)}
           <button className="theme-toggle" onClick={onToggleDarkMode} title="Toggle dark mode">
             {isDarkMode ? '☀️' : '🌙'}
           </button>
