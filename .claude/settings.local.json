@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Read(//opt/homebrew/bin/**)",
+      "Read(//usr/local/bin/**)",
+      "Bash(npm create *)",
+      "Bash(npx create-vite@latest --help)",
+      "Bash(npx create-vite@latest .vite-tmp --template react --no-interactive)",
+      "Bash(xattr .vite-tmp/.gitignore)",
+      "Bash(npm install *)",
+      "Bash(echo \"exit: $?\")"
+    ]
+  }
+}
