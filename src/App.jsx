@@ -7,6 +7,7 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import BhajanForm from './pages/BhajanForm'
 import UserManagement from './pages/UserManagement'
+import ThemeManagement from './pages/ThemeManagement'
 import './App.css'
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard user={user} userRole={userRole} />} />
               <Route path="/bhajan/new" element={<BhajanForm user={user} userRole={userRole} />} />
               <Route path="/bhajan/:id/edit" element={<BhajanForm user={user} userRole={userRole} />} />
+              <Route path="/themes" element={userRole === 'admin' ? <ThemeManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/users" element={userRole === 'admin' ? <UserManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </>

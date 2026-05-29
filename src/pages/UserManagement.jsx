@@ -9,8 +9,10 @@ function UserManagement({ user }) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    display_name: '',
     role: 'viewer'
   })
+  const [editingId, setEditingId] = useState(null)
 
   useEffect(() => {
     fetchUsers()
@@ -37,43 +39,82 @@ function UserManagement({ user }) {
     }))
   }
 
+  const resetForm = () => {
+    setFormData({
+      email: '',
+      password: '',
+      display_name: '',
+      role: 'viewer'
+    })
+    setEditingId(null)
+    setShowForm(false)
+  }
+
   const handleCreateUser = async (e) => {
     e.preventDefault()
 
-    if (!formData.email || !formData.password) {
-      alert('Please fill in all fields')
+    if (!formData.email) {
+      alert('Please fill in all required fields')
       return
     }
 
     setLoading(true)
     try {
-      const { data: { user: newUser }, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true
-      })
+      if (editingId) {
+        await supabase
+          .from('users')
+          .update({
+            display_name: formData.display_name,
+            role: formData.role
+          })
+          .eq('id', editingId)
+        alert('User updated successfully!')
+      } else {
+        if (!formData.password) {
+          alert('Please enter password for new user')
+          setLoading(false)
+          return
+        }
 
-      if (authError) throw authError
-
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert([{
-          id: newUser.id,
+        const { data: { user: newUser }, error: authError } = await supabase.auth.admin.createUser({
           email: formData.email,
-          role: formData.role
-        }])
+          password: formData.password,
+          email_confirm: true
+        })
 
-      if (dbError) throw dbError
+        if (authError) throw authError
 
-      alert('User created successfully!')
-      setFormData({ email: '', password: '', role: 'viewer' })
-      setShowForm(false)
+        const { error: dbError } = await supabase
+          .from('users')
+          .insert([{
+            id: newUser.id,
+            email: formData.email,
+            display_name: formData.display_name,
+            role: formData.role
+          }])
+
+        if (dbError) throw dbError
+        alert('User created successfully!')
+      }
+
+      resetForm()
       await fetchUsers()
     } catch (err) {
-      alert('Error creating user: ' + err.message)
+      alert('Error: ' + err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEditUser = (userData) => {
+    setFormData({
+      email: userData.email,
+      password: '',
+      display_name: userData.display_name || '',
+      role: userData.role
+    })
+    setEditingId(userData.id)
+    setShowForm(true)
   }
 
   const handleDeleteUser = async (userId, userEmail) => {
@@ -107,29 +148,43 @@ function UserManagement({ user }) {
 
       {showForm && (
         <div className="admin-form">
-          <h2>Create New User</h2>
+          <h2>{editingId ? 'Edit User' : 'Create New User'}</h2>
           <form onSubmit={handleCreateUser}>
             <div className="form-group">
-              <label>Email</label>
+              <label>Email {!editingId && '*'}</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
                 placeholder="user@example.com"
-                required
+                disabled={!!editingId}
+                required={!editingId}
               />
             </div>
 
+            {!editingId && (
+              <div className="form-group">
+                <label>Password *</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+            )}
+
             <div className="form-group">
-              <label>Password</label>
+              <label>Display Name</label>
               <input
-                type="password"
-                name="password"
-                value={formData.password}
+                type="text"
+                name="display_name"
+                value={formData.display_name}
                 onChange={handleInputChange}
-                placeholder="Enter password"
-                required
+                placeholder="e.g., Hari Brahmachari"
               />
             </div>
 
@@ -148,11 +203,11 @@ function UserManagement({ user }) {
 
             <div className="form-actions">
               <button type="submit" disabled={loading} className="btn-primary">
-                {loading ? 'Creating...' : 'Create User'}
+                {loading ? 'Saving...' : editingId ? 'Update User' : 'Create User'}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={resetForm}
                 className="btn-secondary"
               >
                 Cancel
@@ -172,6 +227,7 @@ function UserManagement({ user }) {
             <thead>
               <tr>
                 <th>Email</th>
+                <th>Display Name</th>
                 <th>Role</th>
                 <th>Created At</th>
                 <th>Actions</th>
@@ -181,6 +237,7 @@ function UserManagement({ user }) {
               {users.map(u => (
                 <tr key={u.id}>
                   <td>{u.email}</td>
+                  <td>{u.display_name || '-'}</td>
                   <td>
                     <span className={`badge badge-${u.role}`}>
                       {u.role.toUpperCase()}
@@ -189,10 +246,14 @@ function UserManagement({ user }) {
                   <td>{new Date(u.created_at).toLocaleDateString()}</td>
                   <td>
                     <button
+                      onClick={() => handleEditUser(u)}
+                      className="action-link"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => handleDeleteUser(u.id, u.email)}
-                      className="btn-delete"
-                      disabled={u.id === user.id}
-                      title={u.id === user.id ? 'Cannot delete own account' : 'Delete user'}
+                      className="action-link delete"
                     >
                       Delete
                     </button>

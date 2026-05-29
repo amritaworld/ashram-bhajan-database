@@ -47,12 +47,20 @@ function Header({ userRole }) {
             + Add Bhajan
           </button>
           {userRole === 'admin' && (
-            <button
-              onClick={() => handleNavigation('/users')}
-              className={`nav-link ${isActive('/users') ? 'active' : ''}`}
-            >
-              Users
-            </button>
+            <>
+              <button
+                onClick={() => handleNavigation('/themes')}
+                className={`nav-link ${isActive('/themes') ? 'active' : ''}`}
+              >
+                Themes
+              </button>
+              <button
+                onClick={() => handleNavigation('/users')}
+                className={`nav-link ${isActive('/users') ? 'active' : ''}`}
+              >
+                Users
+              </button>
+            </>
           )}
           <button
             onClick={handleLogout}
