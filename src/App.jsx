@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard'
 import BhajanForm from './pages/BhajanForm'
 import UserManagement from './pages/UserManagement'
 import ThemeManagement from './pages/ThemeManagement'
+import ContributorManagement from './pages/ContributorManagement'
 import './App.css'
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
               <Route path="/bhajan/:id/edit" element={<BhajanForm user={user} userRole={userRole} />} />
               <Route path="/themes" element={userRole === 'admin' ? <ThemeManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/users" element={userRole === 'admin' ? <UserManagement user={user} /> : <Navigate to="/dashboard" />} />
+              <Route path="/contributors" element={userRole === 'admin' ? <ContributorManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </>
           ) : (

@@ -1,0 +1,105 @@
+.activity-log-container {
+  background: linear-gradient(135deg, #111114 0%, #18181c 100%);
+  border: 1px solid #2a2a30;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.activity-log-container h3 {
+  color: #d6a84f;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.125rem;
+}
+
+.activities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.activity-item {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a2a30;
+  border-radius: 0.5rem;
+  transition: all 200ms ease;
+}
+
+.activity-item:hover {
+  border-color: #d6a84f;
+  background: rgba(214, 168, 79, 0.05);
+}
+
+.activity-icon {
+  font-size: 1.5rem;
+  min-width: 40px;
+  text-align: center;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.activity-action {
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.activity-time {
+  color: #a7a7a7;
+  font-size: 0.75rem;
+}
+
+.activity-description {
+  color: #f5f5f5;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.activity-user {
+  color: #a7a7a7;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.activity-user strong {
+  color: #d6a84f;
+}
+
+.activity-fields {
+  color: #a7a7a7;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.loading,
+.no-activities {
+  text-align: center;
+  padding: 2rem;
+  color: #a7a7a7;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .activity-item {
+    gap: 0.75rem;
+  }
+
+  .activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}

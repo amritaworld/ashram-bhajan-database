@@ -55,6 +55,12 @@ function Header({ userRole }) {
                 Themes
               </button>
               <button
+                onClick={() => handleNavigation('/contributors')}
+                className={`nav-link ${isActive('/contributors') ? 'active' : ''}`}
+              >
+                Contributors
+              </button>
+              <button
                 onClick={() => handleNavigation('/users')}
                 className={`nav-link ${isActive('/users') ? 'active' : ''}`}
               >

@@ -1,0 +1,229 @@
+.contributor-management-container {
+  background-color: #0b0b0d;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.contributor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #2a2a30;
+}
+
+.contributor-header h1 {
+  background: linear-gradient(135deg, #d6a84f 0%, #e8bd62 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+.contributor-form-section {
+  background: linear-gradient(135deg, #111114 0%, #18181c 100%);
+  border: 1px solid #2a2a30;
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.contributor-form-section h2 {
+  color: #d6a84f;
+  margin-top: 0;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  color: #d6a84f;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #18181c;
+  border: 1px solid #2a2a30;
+  border-radius: 0.5rem;
+  color: #f5f5f5;
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #d6a84f;
+  box-shadow: 0 0 0 3px rgba(214, 168, 79, 0.1);
+}
+
+.form-group small {
+  display: block;
+  color: #a7a7a7;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.signature-preview {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a2a30;
+  border-radius: 0.5rem;
+  text-align: center;
+}
+
+.signature-preview img {
+  max-width: 200px;
+  max-height: 100px;
+  object-fit: contain;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.search-section {
+  margin-bottom: 2rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.875rem;
+  background-color: #111114;
+  border: 1px solid #2a2a30;
+  border-radius: 0.5rem;
+  color: #f5f5f5;
+  font-size: 0.875rem;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #d6a84f;
+  box-shadow: 0 0 0 3px rgba(214, 168, 79, 0.1);
+}
+
+.contributors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.contributor-card {
+  background: linear-gradient(135deg, #111114 0%, #18181c 100%);
+  border: 1px solid #2a2a30;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 300ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.contributor-card:hover {
+  border-color: #d6a84f;
+  box-shadow: 0 6px 16px rgba(214, 168, 79, 0.15);
+  transform: translateY(-4px);
+}
+
+.contributor-signature {
+  width: 100%;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed #2a2a30;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.contributor-signature img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.contributor-info h3 {
+  margin: 0 0 0.75rem 0;
+  color: #d6a84f;
+  font-size: 1rem;
+}
+
+.contributor-info p {
+  margin: 0.5rem 0;
+  color: #a7a7a7;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.contributor-info p.id-proof {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.contributor-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+.contributor-actions button {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.loading,
+.no-results {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #a7a7a7;
+  background: linear-gradient(135deg, #111114 0%, #18181c 100%);
+  border: 1px dashed #2a2a30;
+  border-radius: 1rem;
+}
+
+@media (max-width: 768px) {
+  .contributor-management-container {
+    padding: 1rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .contributors-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
