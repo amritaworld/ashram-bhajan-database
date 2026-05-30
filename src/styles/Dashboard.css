@@ -1,6 +1,8 @@
 .dashboard {
   background-color: #0b0b0d;
   min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .dashboard-header {

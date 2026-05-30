@@ -40,12 +40,6 @@ function Header({ userRole }) {
           >
             Dashboard
           </button>
-          <button
-            onClick={() => handleNavigation('/bhajan/new')}
-            className="nav-link btn-primary"
-          >
-            + Add Bhajan
-          </button>
           {userRole === 'admin' && (
             <>
               <button
@@ -73,6 +67,12 @@ function Header({ userRole }) {
             className="nav-link logout"
           >
             Logout
+          </button>
+          <button
+            onClick={() => handleNavigation('/bhajan/new')}
+            className="nav-link btn-primary"
+          >
+            + Add Bhajan
           </button>
         </nav>
       </div>
