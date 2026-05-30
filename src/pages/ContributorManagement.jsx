@@ -160,15 +160,17 @@ function ContributorManagement() {
     setLoading(true)
     try {
       if (editingId) {
-        await supabase
+        const { error } = await supabase
           .from('contributors')
           .update(formData)
           .eq('id', editingId)
+        if (error) throw error
         alert('Contributor updated successfully!')
       } else {
-        await supabase
+        const { error } = await supabase
           .from('contributors')
           .insert([formData])
+        if (error) throw error
         alert('Contributor created successfully!')
       }
       
