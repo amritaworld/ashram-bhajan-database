@@ -13,8 +13,10 @@ function ContributorManagement() {
     address: '',
     id_proof_type: '',
     id_proof_number: '',
-    signature_url: ''
+    signature_url: '',
+    photo_url: ''
   })
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadingSignature, setUploadingSignature] = useState(false)
@@ -88,6 +90,50 @@ function ContributorManagement() {
     }))
   }
 
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!formData.name.trim()) {
+      alert('Please enter contributor name first')
+      return
+    }
+
+    setUploadingPhoto(true)
+    try {
+      const fileName = `${Date.now()}-${file.name}`
+      const filePath = `${formData.name}/photo/${fileName}`
+
+      const { error } = await supabase.storage
+        .from('signatures')
+        .upload(filePath, file, { upsert: false })
+
+      if (error) throw error
+
+      const { data: publicUrlData } = supabase.storage
+        .from('signatures')
+        .getPublicUrl(filePath)
+
+      setFormData(prev => ({
+        ...prev,
+        photo_url: publicUrlData.publicUrl
+      }))
+
+      alert('Photo uploaded successfully!')
+    } catch (err) {
+      alert('Error uploading photo: ' + err.message)
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleDeletePhoto = () => {
+    setFormData(prev => ({
+      ...prev,
+      photo_url: ''
+    }))
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -96,7 +142,8 @@ function ContributorManagement() {
       address: '',
       id_proof_type: '',
       id_proof_number: '',
-      signature_url: ''
+      signature_url: '',
+      photo_url: ''
     })
     setEditingId(null)
     setShowForm(false)
@@ -247,6 +294,31 @@ function ContributorManagement() {
             </div>
 
             <div className="form-group">
+              <label>Photo (Image File)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                disabled={uploadingPhoto}
+              />
+              {uploadingPhoto && <p style={{ color: '#d6a84f' }}>Uploading photo...</p>}
+            </div>
+
+            {formData.photo_url && (
+              <div className="signature-preview">
+                <img src={formData.photo_url} alt="Contributor Photo Preview" />
+                <button
+                  type="button"
+                  onClick={handleDeletePhoto}
+                  className="btn-delete"
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  Remove Photo
+                </button>
+              </div>
+            )}
+
+            <div className="form-group">
               <label>Signature (Image File)</label>
               <input
                 type="file"
@@ -305,19 +377,26 @@ function ContributorManagement() {
         <div className="contributors-grid">
           {filteredContributors.map(contributor => (
             <div key={contributor.id} className="contributor-card">
-              {contributor.signature_url && (
-                <div className="contributor-signature">
-                  <img src={contributor.signature_url} alt={contributor.name} />
-                </div>
+              {contributor.photo_url ? (
+                <img src={contributor.photo_url} alt={contributor.name} className="contributor-photo" />
+              ) : (
+                <div className="contributor-photo contributor-photo-placeholder">👤</div>
               )}
               <div className="contributor-info">
-                <h3>{contributor.name}</h3>
-                {contributor.email && <p>📧 {contributor.email}</p>}
-                {contributor.phone && <p>📱 {contributor.phone}</p>}
-                {contributor.id_proof_type && (
-                  <p className="id-proof">ID: {contributor.id_proof_type} - {contributor.id_proof_number}</p>
-                )}
-              </div>
+                <div className="contributor-info-main">
+                  <h3>{contributor.name}</h3>
+                  {contributor.email && <p>📧 {contributor.email}</p>}
+                  {contributor.phone && <p>📱 {contributor.phone}</p>}
+                  {contributor.id_proof_type && (
+                    <p className="id-proof">ID: {contributor.id_proof_type} - {contributor.id_proof_number}</p>
+                  )}
+                  {contributor.signature_url && (
+                    <div className="contributor-signature-mini">
+                      <span>Signature</span>
+                      <img src={contributor.signature_url} alt={`${contributor.name} signature`} />
+                    </div>
+                  )}
+                </div>
               <div className="contributor-actions">
                 <button
                   onClick={() => handleEdit(contributor)}
@@ -331,6 +410,7 @@ function ContributorManagement() {
                 >
                   Delete
                 </button>
+                </div>
               </div>
             </div>
           ))}
