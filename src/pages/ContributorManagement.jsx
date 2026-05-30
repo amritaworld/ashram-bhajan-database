@@ -295,13 +295,19 @@ function ContributorManagement() {
 
             <div className="form-group">
               <label>Photo (Image File)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoUpload}
-                disabled={uploadingPhoto}
-              />
-              {uploadingPhoto && <p style={{ color: '#d6a84f' }}>Uploading photo...</p>}
+              <div className="file-upload">
+                <input
+                  id="photo-input"
+                  className="file-upload-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                />
+                <label htmlFor="photo-input" className="file-upload-btn">
+                  📷 {uploadingPhoto ? 'Uploading...' : 'Choose photo'}
+                </label>
+              </div>
             </div>
 
             {formData.photo_url && (
@@ -320,13 +326,19 @@ function ContributorManagement() {
 
             <div className="form-group">
               <label>Signature (Image File)</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSignatureUpload}
-                disabled={uploadingSignature}
-              />
-              {uploadingSignature && <p style={{ color: '#d6a84f' }}>Uploading signature...</p>}
+              <div className="file-upload">
+                <input
+                  id="signature-input"
+                  className="file-upload-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSignatureUpload}
+                  disabled={uploadingSignature}
+                />
+                <label htmlFor="signature-input" className="file-upload-btn">
+                  ✍️ {uploadingSignature ? 'Uploading...' : 'Choose signature'}
+                </label>
+              </div>
             </div>
 
             {formData.signature_url && (
