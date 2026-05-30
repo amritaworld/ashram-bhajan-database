@@ -40,7 +40,7 @@ function Header({ userRole }) {
           >
             Dashboard
           </button>
-          {userRole === 'admin' && (
+          {(userRole === 'admin' || userRole === 'contributor') && (
             <>
               <button
                 onClick={() => handleNavigation('/themes')}
@@ -54,13 +54,15 @@ function Header({ userRole }) {
               >
                 Contributors
               </button>
-              <button
-                onClick={() => handleNavigation('/users')}
-                className={`nav-link ${isActive('/users') ? 'active' : ''}`}
-              >
-                Users
-              </button>
             </>
+          )}
+          {userRole === 'admin' && (
+            <button
+              onClick={() => handleNavigation('/users')}
+              className={`nav-link ${isActive('/users') ? 'active' : ''}`}
+            >
+              Users
+            </button>
           )}
           <button
             onClick={handleLogout}

@@ -49,9 +49,9 @@ function App() {
               <Route path="/dashboard" element={<Dashboard user={user} userRole={userRole} />} />
               <Route path="/bhajan/new" element={<BhajanForm user={user} userRole={userRole} />} />
               <Route path="/bhajan/:id/edit" element={<BhajanForm user={user} userRole={userRole} />} />
-              <Route path="/themes" element={userRole === 'admin' ? <ThemeManagement user={user} /> : <Navigate to="/dashboard" />} />
+              <Route path="/themes" element={(userRole === 'admin' || userRole === 'contributor') ? <ThemeManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/users" element={userRole === 'admin' ? <UserManagement user={user} /> : <Navigate to="/dashboard" />} />
-              <Route path="/contributors" element={userRole === 'admin' ? <ContributorManagement user={user} /> : <Navigate to="/dashboard" />} />
+              <Route path="/contributors" element={(userRole === 'admin' || userRole === 'contributor') ? <ContributorManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </>
           ) : (
