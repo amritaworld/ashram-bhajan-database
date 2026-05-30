@@ -24,47 +24,78 @@ function NOCGenerator({ bhajanId, bhajanName, onClose }) {
         .eq('id', bhajanId)
         .single()
 
-      if (bhajanData) {
-        setBhajan(bhajanData)
-
-        const { data: bhajanContributors } = await supabase
-          .from('bhajan_contributors')
-          .select('contributor_id, role')
-          .eq('bhajan_id', bhajanId)
-
-        if (bhajanContributors) {
-          const contributorIds = [...new Set(bhajanContributors.map(c => c.contributor_id))]
-          
-          const { data: contributorDetails } = await supabase
-            .from('contributors')
-            .select('id, name, email, phone, address, id_proof_type, id_proof_number, signature_url')
-            .in('id', contributorIds)
-
-          let enrichedContributors = bhajanContributors.map(bc => {
-            const detail = contributorDetails.find(cd => cd.id === bc.contributor_id)
-            return {
-              ...detail,
-              role: bc.role
-            }
-          })
-
-          // Filter out singers for NOC - keep only lyricists and composers
-          enrichedContributors = enrichedContributors.filter(c => c.role !== 'singer')
-
-          setContributors(enrichedContributors)
-          setUseSingular(enrichedContributors.length === 1)
-
-          const ammaIsCreator = enrichedContributors.some(c => 
-            (c.name?.toLowerCase().includes('mata amritanandamayi') || 
-             c.name?.toLowerCase() === 'amma') &&
-            (c.role === 'lyricist' || c.role === 'composer')
-          )
-          setIsAmmaCreator(ammaIsCreator)
-
-          const noc = generateNOCText(bhajanData.name, enrichedContributors, ammaIsCreator, enrichedContributors.length === 1)
-          setNocContent(noc)
-        }
+      if (!bhajanData) {
+        setLoading(false)
+        return
       }
+      setBhajan(bhajanData)
+
+      // Lyricists/Composers entered on the bhajan form
+      const { data: writers } = await supabase
+        .from('bhajan_writers')
+        .select('writer_name, writer_role')
+        .eq('bhajan_id', bhajanId)
+
+      // Contributors explicitly linked via the registry (older bhajans)
+      const { data: bhajanContributors } = await supabase
+        .from('bhajan_contributors')
+        .select('contributor_id, role')
+        .eq('bhajan_id', bhajanId)
+
+      // Full registry, used to enrich names with signature/contact details
+      const { data: registry } = await supabase
+        .from('contributors')
+        .select('id, name, email, phone, address, id_proof_type, id_proof_number, signature_url')
+
+      const reg = registry || []
+      const byId = {}
+      const byName = {}
+      reg.forEach(c => {
+        byId[c.id] = c
+        if (c.name) byName[c.name.trim().toLowerCase()] = c
+      })
+
+      // Merge both sources, keep only lyricists/composers, dedupe by name+role
+      const map = new Map()
+      const addEntry = (rawName, role, details) => {
+        if (!rawName || !role || role === 'singer') return
+        const name = rawName.trim()
+        const key = name.toLowerCase() + '|' + role
+        if (map.has(key)) return
+        map.set(key, {
+          name,
+          role,
+          email: details?.email || '',
+          phone: details?.phone || '',
+          address: details?.address || '',
+          id_proof_type: details?.id_proof_type || '',
+          id_proof_number: details?.id_proof_number || '',
+          signature_url: details?.signature_url || ''
+        })
+      }
+
+      ;(writers || []).forEach(w =>
+        addEntry(w.writer_name, w.writer_role, byName[(w.writer_name || '').trim().toLowerCase()])
+      )
+      ;(bhajanContributors || []).forEach(bc => {
+        const c = byId[bc.contributor_id]
+        if (c) addEntry(c.name, bc.role, c)
+      })
+
+      const enrichedContributors = Array.from(map.values())
+
+      setContributors(enrichedContributors)
+      setUseSingular(enrichedContributors.length === 1)
+
+      const ammaIsCreator = enrichedContributors.some(c =>
+        (c.name?.toLowerCase().includes('mata amritanandamayi') ||
+         c.name?.toLowerCase() === 'amma') &&
+        (c.role === 'lyricist' || c.role === 'composer')
+      )
+      setIsAmmaCreator(ammaIsCreator)
+
+      const noc = generateNOCText(bhajanData.name, enrichedContributors, ammaIsCreator, enrichedContributors.length === 1)
+      setNocContent(noc)
     } catch (err) {
       console.error('Error loading NOC data:', err)
     }
