@@ -1,0 +1,14 @@
+.soc-create-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.soc-create-row input {
+  flex: 1;
+}
+
+.soc-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

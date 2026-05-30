@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
+import AudioPlayer from '../components/AudioPlayer'
+import SelectOrCreate from '../components/SelectOrCreate'
+import NOCGenerator from '../components/NOCGenerator'
+import ContributorMultiSelect from '../components/ContributorMultiSelect'
 
 function BhajanForm() {
   const navigate = useNavigate()
@@ -16,14 +20,20 @@ function BhajanForm() {
   const [meaning_malayalam, setMeaningMalayalam] = useState('')
   const [meaning_english, setMeaningEnglish] = useState('')
   const [status, setStatus] = useState('draft')
-  const [lyricists, setLyricists] = useState([''])
-  const [composers, setComposers] = useState([''])
-  const [singers, setSingers] = useState([''])
+  const [copyrightHolder, setCopyrightHolder] = useState('Mata Amritanandamayi Math')
+  const [copyrightStatus, setCopyrightStatus] = useState('pending')
+  const [licenseType, setLicenseType] = useState('proprietary')
+  const [showNOC, setShowNOC] = useState(false)
+  const [lyricists, setLyricists] = useState([])
+  const [composers, setComposers] = useState([])
+  const [singers, setSingers] = useState([])
   const [audioFiles, setAudioFiles] = useState([])
   const [uploadingAudio, setUploadingAudio] = useState(false)
   const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
   const [bhajanId, setBhajanId] = useState('')
+  const [themes, setThemes] = useState([])
+  const [contributors, setContributors] = useState([])
   const [suggestions, setSuggestions] = useState({
     themes: [],
     ragas: [],
@@ -35,9 +45,37 @@ function BhajanForm() {
 
   useEffect(() => {
     getUser()
+    loadThemes()
+    loadContributors()
     loadSuggestions()
     if (id) loadBhajan()
   }, [id])
+
+  const loadContributors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('contributors')
+        .select('id, name, email')
+        .order('name')
+      if (error) throw error
+      setContributors(data || [])
+    } catch (err) {
+      console.error('Error loading contributors:', err)
+    }
+  }
+
+  const loadThemes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('themes')
+        .select('id, name')
+        .order('name')
+      if (error) throw error
+      setThemes(data || [])
+    } catch (err) {
+      console.error('Error loading themes:', err)
+    }
+  }
 
   const getUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -117,6 +155,9 @@ function BhajanForm() {
       }
 
       setStatus(data.status || 'draft')
+      setCopyrightHolder(data.copyright_holder || 'Mata Amritanandamayi Math')
+      setCopyrightStatus(data.copyright_status || 'pending')
+      setLicenseType(data.license_type || 'proprietary')
 
       const { data: writersData } = await supabase
         .from('bhajan_writers')
@@ -126,8 +167,8 @@ function BhajanForm() {
       if (writersData && writersData.length > 0) {
         const lyricistsList = writersData.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name)
         const composersList = writersData.filter(w => w.writer_role === 'composer').map(w => w.writer_name)
-        setLyricists(lyricistsList.length > 0 ? lyricistsList : [''])
-        setComposers(composersList.length > 0 ? composersList : [''])
+        setLyricists(lyricistsList)
+        setComposers(composersList)
       }
 
       const { data: singersData } = await supabase
@@ -138,16 +179,45 @@ function BhajanForm() {
         setSingers(singersData.map(s => s.singer_name))
       }
 
-      const { data: audioData } = await supabase
-        .from('audio_files')
-        .select('*')
-        .eq('bhajan_id', id)
-      if (audioData && audioData.length > 0) {
-        setAudioFiles(audioData)
-      }
+      await loadAudioFiles(data.bhajan_id)
     }
 
     setLoading(false)
+  }
+
+  const loadAudioFiles = async (folderId) => {
+    if (!folderId) {
+      setAudioFiles([])
+      return
+    }
+    try {
+      const { data, error } = await supabase.storage
+        .from('bhajan-audio')
+        .list(folderId)
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        const filesWithUrls = data.map(file => {
+          const path = `${folderId}/${file.name}`
+          const { data: urlData } = supabase.storage
+            .from('bhajan-audio')
+            .getPublicUrl(path)
+          return {
+            name: file.name,
+            displayName: file.name.replace(/^\d+-/, ''),
+            url: urlData.publicUrl,
+            path
+          }
+        })
+        setAudioFiles(filesWithUrls)
+      } else {
+        setAudioFiles([])
+      }
+    } catch (err) {
+      console.error('Error loading audio files:', err)
+      setAudioFiles([])
+    }
   }
 
   const handleAudioUpload = async (e) => {
@@ -174,8 +244,8 @@ function BhajanForm() {
         if (uploadError) throw uploadError
       }
 
-      alert('Audio files uploaded successfully!')
       e.target.value = ''
+      await loadAudioFiles(tempBhajanId)
     } catch (err) {
       alert('Error uploading audio: ' + err.message)
     } finally {
@@ -184,16 +254,13 @@ function BhajanForm() {
   }
 
   const handleDeleteAudio = async (filePath) => {
-    if (window.confirm('Delete this audio file?')) {
-      try {
-        await supabase.storage.from('bhajan-audio').remove([filePath])
-        alert('Audio file deleted')
-        if (id) {
-          loadBhajan()
-        }
-      } catch (err) {
-        alert('Error deleting audio: ' + err.message)
-      }
+    if (!window.confirm('Delete this audio file?')) return
+    try {
+      const { error } = await supabase.storage.from('bhajan-audio').remove([filePath])
+      if (error) throw error
+      setAudioFiles(prev => prev.filter(f => f.path !== filePath))
+    } catch (err) {
+      alert('Error deleting audio: ' + err.message)
     }
   }
 
@@ -219,6 +286,9 @@ function BhajanForm() {
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
+            copyright_holder: copyrightHolder,
+            copyright_status: copyrightStatus,
+            license_type: licenseType,
             updated_by: user?.id
           })
           .eq('id', id)
@@ -234,6 +304,9 @@ function BhajanForm() {
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
+            copyright_holder: copyrightHolder,
+            copyright_status: copyrightStatus,
+            license_type: licenseType,
             created_by: user?.id
           }])
           .select()
@@ -289,45 +362,33 @@ function BhajanForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Theme</label>
-            <input
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              list="themes-list"
-              placeholder="Select or type theme..."
-            />
-            <datalist id="themes-list">
-              {suggestions.themes.map(t => (
-                <option key={t} value={t} />
+            <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+              <option value="">Select theme...</option>
+              {themes.map(t => (
+                <option key={t.id} value={t.name}>{t.name}</option>
               ))}
-            </datalist>
+              {theme && !themes.some(t => t.name === theme) && (
+                <option value={theme}>{theme} (legacy)</option>
+              )}
+            </select>
           </div>
           <div className="form-group">
             <label>Raga</label>
-            <input
+            <SelectOrCreate
+              label="Raga"
               value={raga}
-              onChange={(e) => setRaga(e.target.value)}
-              list="ragas-list"
-              placeholder="Select or type raga..."
+              options={suggestions.ragas}
+              onChange={setRaga}
             />
-            <datalist id="ragas-list">
-              {suggestions.ragas.map(r => (
-                <option key={r} value={r} />
-              ))}
-            </datalist>
           </div>
           <div className="form-group">
             <label>Tala</label>
-            <input
+            <SelectOrCreate
+              label="Tala"
               value={tala}
-              onChange={(e) => setTala(e.target.value)}
-              list="talas-list"
-              placeholder="Select or type tala..."
+              options={suggestions.talas}
+              onChange={setTala}
             />
-            <datalist id="talas-list">
-              {suggestions.talas.map(t => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
           </div>
         </div>
 
@@ -353,12 +414,12 @@ function BhajanForm() {
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyrics</h2>
         <div className="form-group">
           <label>Malayalam</label>
-          <textarea value={lyrics_malayalam} onChange={(e) => setLyricsMalayalam(e.target.value)} rows="5" placeholder="Malayalam lyrics" />
+          <textarea value={lyrics_malayalam} onChange={(e) => setLyricsMalayalam(e.target.value)} rows="9" placeholder="Malayalam lyrics" />
         </div>
 
         <div className="form-group">
           <label>English</label>
-          <textarea value={lyrics_english} onChange={(e) => setLyricsEnglish(e.target.value)} rows="5" placeholder="English lyrics" />
+          <textarea value={lyrics_english} onChange={(e) => setLyricsEnglish(e.target.value)} rows="9" placeholder="English lyrics" />
         </div>
 
         <h2 style={{ marginBottom: '1rem' }}>Meaning & Translation</h2>
@@ -372,93 +433,121 @@ function BhajanForm() {
           <textarea value={meaning_english} onChange={(e) => setMeaningEnglish(e.target.value)} rows="4" placeholder="English meaning/translation" />
         </div>
 
-        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyricists</h2>
-        {lyricists.map((lyricist, idx) => (
-          <div key={idx} className="contributor-item">
-            <input
-              value={lyricist}
-              onChange={(e) => {
-                const newLyricists = [...lyricists]
-                newLyricists[idx] = e.target.value
-                setLyricists(newLyricists)
-              }}
-              list="lyricists-list"
-              placeholder="Lyricist name"
-            />
-            <datalist id="lyricists-list">
-              {suggestions.lyricists.map(l => (
-                <option key={l} value={l} />
-              ))}
-            </datalist>
-            {lyricists.length > 1 && (
-              <button onClick={() => setLyricists(lyricists.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
-            )}
-          </div>
-        ))}
-        <button onClick={() => setLyricists([...lyricists, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Lyricist</button>
-
-        <h2 style={{ marginBottom: '1rem' }}>Composers</h2>
-        {composers.map((composer, idx) => (
-          <div key={idx} className="contributor-item">
-            <input
-              value={composer}
-              onChange={(e) => {
-                const newComposers = [...composers]
-                newComposers[idx] = e.target.value
-                setComposers(newComposers)
-              }}
-              list="composers-list"
-              placeholder="Composer name"
-            />
-            <datalist id="composers-list">
-              {suggestions.composers.map(c => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-            {composers.length > 1 && (
-              <button onClick={() => setComposers(composers.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
-            )}
-          </div>
-        ))}
-        <button onClick={() => setComposers([...composers, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Composer</button>
-
-        <h2 style={{ marginBottom: '1rem' }}>Singers</h2>
-        {singers.map((singer, idx) => (
-          <div key={idx} className="contributor-item">
-            <input
-              value={singer}
-              onChange={(e) => {
-                const newSingers = [...singers]
-                newSingers[idx] = e.target.value
-                setSingers(newSingers)
-              }}
-              list="singers-list"
-              placeholder="Singer name"
-            />
-            <datalist id="singers-list">
-              {suggestions.singers.map(s => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
-            {singers.length > 1 && (
-              <button onClick={() => setSingers(singers.filter((_, i) => i !== idx))} className="btn-delete">Remove</button>
-            )}
-          </div>
-        ))}
-        <button onClick={() => setSingers([...singers, ''])} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>+ Add Singer</button>
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Contributors</h2>
+        <div className="contributors-section">
+          {[
+            { title: 'Lyricists', items: lyricists, setItems: setLyricists, singular: 'Lyricist' },
+            { title: 'Composers', items: composers, setItems: setComposers, singular: 'Composer' },
+            { title: 'Singers', items: singers, setItems: setSingers, singular: 'Singer' }
+          ].map(({ title, items, setItems, singular }) => (
+            <div key={title} className="contributor-group">
+              <h3 className="contributor-group-title">{title}</h3>
+              <ContributorMultiSelect
+                value={items}
+                contributors={contributors}
+                placeholder={`Search ${singular.toLowerCase()}...`}
+                onChange={setItems}
+              />
+            </div>
+          ))}
+        </div>
 
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Audio Files</h2>
         <div className="form-group">
-          <label>Upload Audio (MP3, WAV, etc)</label>
-          <input
-            type="file"
-            accept="audio/*"
-            multiple
-            onChange={handleAudioUpload}
-            disabled={uploadingAudio}
-          />
+          <div className="audio-upload-wrapper">
+            <input
+              id="audio-upload"
+              className="audio-file-input"
+              type="file"
+              accept="audio/*"
+              multiple
+              onChange={handleAudioUpload}
+              disabled={uploadingAudio}
+            />
+            <label htmlFor="audio-upload" className="audio-upload-label">
+              <span className="upload-icon">🎵</span>
+              <span className="upload-text">
+                {uploadingAudio ? 'Uploading...' : 'Click to upload audio'}
+              </span>
+              <span className="upload-hint">MP3, WAV, M4A — you can select multiple files</span>
+            </label>
+          </div>
         </div>
-        {uploadingAudio && <p style={{ color: '#d6a84f' }}>Uploading...</p>}
+
+        {audioFiles.length > 0 && (
+          <div className="audio-files-list">
+            {audioFiles.map((file) => (
+              <AudioPlayer
+                key={file.path}
+                fileName={file.displayName}
+                fileUrl={file.url}
+                onDelete={() => handleDeleteAudio(file.path)}
+              />
+            ))}
+          </div>
+        )}
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Copyright</h2>
+        <div className="copyright-card">
+          <div className="copyright-row">
+            <div className="copyright-item">
+              <label>Copyright Holder</label>
+              <input
+                className="copyright-select"
+                value={copyrightHolder}
+                onChange={(e) => setCopyrightHolder(e.target.value)}
+                placeholder="Mata Amritanandamayi Math"
+              />
+            </div>
+            <div className="copyright-item">
+              <label>Copyright Status</label>
+              <select
+                className="copyright-select"
+                value={copyrightStatus}
+                onChange={(e) => setCopyrightStatus(e.target.value)}
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+              </select>
+            </div>
+            <div className="copyright-item">
+              <label>License Type</label>
+              <select
+                className="copyright-select"
+                value={licenseType}
+                onChange={(e) => setLicenseType(e.target.value)}
+              >
+                <option value="proprietary">Proprietary</option>
+                <option value="cc-by">Creative Commons BY</option>
+                <option value="cc-by-sa">Creative Commons BY-SA</option>
+              </select>
+            </div>
+          </div>
+          <div className="noc-button-wrapper">
+            <button
+              type="button"
+              className="btn-noc"
+              onClick={() => setShowNOC(true)}
+              disabled={!id}
+              title={id ? 'Generate No Objection Certificate' : 'Save the bhajan first to generate an NOC'}
+            >
+              📄 Generate No Objection Certificate (NOC)
+            </button>
+            {!id && (
+              <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.5rem', textAlign: 'center' }}>
+                Save the bhajan first to generate an NOC.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {showNOC && id && (
+          <NOCGenerator
+            bhajanId={id}
+            bhajanName={name}
+            onClose={() => setShowNOC(false)}
+          />
+        )}
 
         <div className="form-actions">
           <button onClick={handleSave} disabled={loading || uploadingAudio} className="btn-primary">

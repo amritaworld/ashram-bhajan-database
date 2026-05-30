@@ -249,10 +249,12 @@ function Dashboard({ user, userRole }) {
         </div>
       )}
 
-      <BhajanDetailsModal
-        bhajan={selectedBhajan}
-        onClose={() => setSelectedBhajan(null)}
-      />
+      {selectedBhajan && (
+        <BhajanDetailsModal
+          bhajanId={selectedBhajan.id}
+          onClose={() => setSelectedBhajan(null)}
+        />
+      )}
       <LyricsModal
         bhajan={selectedLyrics}
         onClose={() => setSelectedLyrics(null)}

@@ -1,0 +1,338 @@
+.noc-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.noc-modal {
+  background: #0b0b0d;
+  border: 1px solid #2a2a30;
+  border-radius: 0.75rem;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 95%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+.noc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #2a2a30;
+  background: #111114;
+}
+
+.noc-modal-header h2 {
+  color: #d6a84f;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.noc-close {
+  background: none;
+  border: none;
+  color: #d6a84f;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.noc-close:hover {
+  color: #e8bd62;
+}
+
+.noc-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #2a2a30;
+  background: #111114;
+}
+
+.noc-btn-print {
+  background: linear-gradient(135deg, #d6a84f 0%, #e8bd62 100%);
+  color: #0b0b0d;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.noc-btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(214, 168, 79, 0.3);
+}
+
+.noc-btn-close {
+  background: transparent;
+  color: #d6a84f;
+  border: 1px solid #d6a84f;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.noc-btn-close:hover {
+  background: #d6a84f;
+  color: #0b0b0d;
+}
+
+.noc-document {
+  padding: 2.5rem;
+  color: #e5e7eb;
+  line-height: 1.85;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 1.02rem;
+}
+
+.noc-letterhead {
+  text-align: center;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 2px solid #d6a84f;
+}
+
+.noc-letterhead-img {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.noc-title {
+  text-align: center;
+  margin: 0 0 2rem;
+  color: #f5f5f5;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 8px;
+}
+
+.noc-content {
+  margin-bottom: 2rem;
+  text-align: justify;
+}
+
+.noc-content p {
+  margin: 0.75rem 0;
+  color: #e5e7eb;
+}
+
+.noc-contributors-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #2a2a30;
+}
+
+.noc-contributors-section h3 {
+  color: #d6a84f;
+  margin-bottom: 1.5rem;
+  font-size: 1.2rem;
+}
+
+.noc-contributor {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #18181c;
+  border-left: 3px solid #d6a84f;
+  border-radius: 0.5rem;
+}
+
+.noc-contributor p {
+  margin: 0.5rem 0;
+  color: #e5e7eb;
+}
+
+.noc-contributor strong {
+  color: #d6a84f;
+  font-weight: 600;
+}
+
+.noc-signature {
+  margin-top: 1rem;
+}
+
+.noc-signature p {
+  color: #d6a84f;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.noc-signature img {
+  max-width: 200px;
+  height: auto;
+  border: 1px solid #2a2a30;
+  border-radius: 0.375rem;
+  background: #0b0b0d;
+  padding: 0.5rem;
+}
+
+.noc-signatory-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #2a2a30;
+}
+
+.noc-signatory-section h3 {
+  color: #d6a84f;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.noc-signatory-section p {
+  margin: 1rem 0;
+  color: #e5e7eb;
+}
+
+.noc-witnesses-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #2a2a30;
+}
+
+.noc-witnesses-section h3 {
+  color: #d6a84f;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+}
+
+.noc-witness {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #18181c;
+  border-radius: 0.5rem;
+}
+
+.noc-witness p {
+  margin: 0.75rem 0;
+  color: #e5e7eb;
+}
+
+.noc-witness strong {
+  color: #d6a84f;
+  font-weight: 600;
+}
+
+@media print {
+  @page {
+    margin: 1.5cm;
+  }
+
+  /* The whole app lives in #root; the NOC modal is portaled to <body>.
+     Hiding #root removes the app's layout entirely (no trailing pages). */
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  #root {
+    display: none !important;
+  }
+
+  /* Let the certificate flow as normal page content (paginates correctly) */
+  .noc-modal-overlay {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    background: #fff !important;
+    padding: 0 !important;
+    z-index: auto !important;
+  }
+
+  .noc-modal {
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .noc-modal-header,
+  .noc-modal-actions {
+    display: none !important;
+  }
+
+  .noc-document {
+    position: static !important;
+    width: 100%;
+    color: black;
+    background: #fff;
+    padding: 0;
+    font-size: 12pt;
+    line-height: 1.7;
+    /* Ensure the colour logo / wordmark print in full colour */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .noc-signature img {
+    max-width: 200px;
+  }
+
+  .noc-letterhead {
+    border-bottom: 2px solid black;
+  }
+
+  .noc-letterhead-img {
+    max-width: 460px;
+  }
+
+  .noc-title {
+    color: black !important;
+  }
+
+  .noc-content p,
+  .noc-contributor p,
+  .noc-signatory-section p,
+  .noc-witness p,
+  .noc-contributors-section h3,
+  .noc-signatory-section h3,
+  .noc-witnesses-section h3,
+  .noc-contributor strong,
+  .noc-witness strong {
+    color: black !important;
+  }
+
+  /* Plain bordered boxes instead of dark cards */
+  .noc-contributor,
+  .noc-witness {
+    background: white !important;
+    border: 1px solid #999 !important;
+    border-left: 3px solid #555 !important;
+  }
+
+  /* Keep logical blocks from splitting across pages */
+  .noc-contributor,
+  .noc-witness,
+  .noc-signatory-section,
+  .noc-contributors-section {
+    page-break-inside: avoid;
+  }
+}

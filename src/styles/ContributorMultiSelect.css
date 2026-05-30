@@ -1,0 +1,135 @@
+.contrib-multi {
+  width: 100%;
+}
+
+.contrib-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+
+.contrib-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.35rem 0.3rem 0.7rem;
+  background: rgba(214, 168, 79, 0.14);
+  border: 1px solid rgba(214, 168, 79, 0.45);
+  border-radius: 999px;
+  color: #f5f5f5;
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.contrib-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(214, 168, 79, 0.25);
+  color: #f5f5f5;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.contrib-chip-remove:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.contrib-multi-input {
+  position: relative;
+}
+
+.contrib-multi-input input {
+  width: 100%;
+  padding: 0.875rem;
+  background-color: #18181c;
+  border: 1px solid #2a2a30;
+  border-radius: 0.625rem;
+  color: #f5f5f5;
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: all 200ms ease;
+}
+
+.contrib-multi-input input::placeholder {
+  color: #6b7280;
+}
+
+.contrib-multi-input input:focus {
+  outline: none;
+  border-color: #d6a84f;
+  box-shadow: 0 0 0 3px rgba(214, 168, 79, 0.1);
+  background-color: rgba(24, 24, 28, 0.9);
+}
+
+/* Dropdown (shared visual language with ContributorSearch) */
+.contrib-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #18181c;
+  border: 1px solid #2a2a30;
+  border-radius: 0.625rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.contrib-search-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #232329;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease;
+}
+
+.contrib-search-option:last-child {
+  border-bottom: none;
+}
+
+.contrib-search-option:hover {
+  background: rgba(214, 168, 79, 0.12);
+}
+
+.contrib-search-name {
+  color: #f5f5f5;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.contrib-search-meta {
+  color: #9ca3af;
+  font-size: 0.75rem;
+}
+
+.contrib-search-empty {
+  padding: 0.65rem 0.875rem;
+  color: #9ca3af;
+  font-size: 0.78rem;
+}
+
+.contrib-search-add {
+  color: #d6a84f;
+  font-weight: 600;
+  border-top: 1px solid #232329;
+}
