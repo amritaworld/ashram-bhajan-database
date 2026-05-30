@@ -217,26 +217,8 @@ body {
   background-color: rgba(255, 92, 92, 0.15);
 }
 
-.contributors-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-}
-
-.contributor-card {
-  background: linear-gradient(135deg, rgba(214, 168, 79, 0.08) 0%, rgba(214, 168, 79, 0.02) 100%);
-  border: 2px solid #2a2a30;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  transition: all 300ms ease;
-}
-
-.contributor-card:hover {
-  border-color: #d6a84f;
-  box-shadow: 0 8px 24px rgba(214, 168, 79, 0.15);
-  transform: translateY(-4px);
-}
+/* .contributors-grid and .contributor-card are defined in
+   styles/ContributorManagement.css (the contributors page owns them). */
 
 .contributor-header {
   display: flex;
