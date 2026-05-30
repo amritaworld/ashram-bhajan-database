@@ -12,6 +12,7 @@ function Dashboard({ user, userRole }) {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTheme, setFilterTheme] = useState('')
+  const [filterRaga, setFilterRaga] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [stats, setStats] = useState({
     totalBhajans: 0,
@@ -20,6 +21,7 @@ function Dashboard({ user, userRole }) {
     draftBhajans: 0
   })
   const [themes, setThemes] = useState([])
+  const [ragas, setRagas] = useState([])
   const [selectedBhajan, setSelectedBhajan] = useState(null)
   const [selectedLyrics, setSelectedLyrics] = useState(null)
 
@@ -30,7 +32,7 @@ function Dashboard({ user, userRole }) {
 
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterStatus, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterStatus, bhajans])
 
   const loadBhajans = async () => {
     setLoading(true)
@@ -68,6 +70,9 @@ function Dashboard({ user, userRole }) {
 
       const uniqueThemes = [...new Set(bhajanData?.map(b => b.theme).filter(t => t))]
       setThemes(uniqueThemes)
+
+      const uniqueRagas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
+      setRagas(uniqueRagas)
     } catch (err) {
       console.error('Error loading stats:', err)
     }
@@ -84,6 +89,12 @@ function Dashboard({ user, userRole }) {
 
     if (filterTheme) {
       filtered = filtered.filter(b => b.theme === filterTheme)
+    }
+
+    if (filterRaga) {
+      filtered = filtered.filter(b =>
+        (b.raga || '').split(',').map(s => s.trim()).includes(filterRaga)
+      )
     }
 
     if (filterStatus) {
@@ -163,6 +174,17 @@ function Dashboard({ user, userRole }) {
           </select>
 
           <select
+            value={filterRaga}
+            onChange={(e) => setFilterRaga(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Ragas</option>
+            {ragas.map(raga => (
+              <option key={raga} value={raga}>{raga}</option>
+            ))}
+          </select>
+
+          <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="filter-select"
@@ -173,11 +195,12 @@ function Dashboard({ user, userRole }) {
             <option value="archived">Archived</option>
           </select>
 
-          {(searchTerm || filterTheme || filterStatus) && (
+          {(searchTerm || filterTheme || filterRaga || filterStatus) && (
             <button
               onClick={() => {
                 setSearchTerm('')
                 setFilterTheme('')
+                setFilterRaga('')
                 setFilterStatus('')
               }}
               className="btn-secondary"
@@ -208,7 +231,9 @@ function Dashboard({ user, userRole }) {
                 <h3>{bhajan.name}</h3>
                 <div className="bhajan-meta">
                   {bhajan.theme && <span className="meta-badge">{bhajan.theme}</span>}
-                  {bhajan.raga && <span className="meta-badge">{bhajan.raga}</span>}
+                  {(bhajan.raga || '').split(',').map(s => s.trim()).filter(Boolean).map(r => (
+                    <span key={r} className="meta-badge">{r}</span>
+                  ))}
                   {bhajan.tala && <span className="meta-badge">{bhajan.tala}</span>}
                   <span className={`status-badge status-${bhajan.status}`}>
                     {bhajan.status.toUpperCase()}

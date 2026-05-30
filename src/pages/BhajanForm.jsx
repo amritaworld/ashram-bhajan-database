@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import AudioPlayer from '../components/AudioPlayer'
 import SelectOrCreate from '../components/SelectOrCreate'
+import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
 
@@ -11,7 +12,7 @@ function BhajanForm() {
   const { id } = useParams()
   const [name, setName] = useState('')
   const [theme, setTheme] = useState('')
-  const [raga, setRaga] = useState('')
+  const [ragas, setRagas] = useState([])
   const [tala, setTala] = useState('')
   const [duration_minutes, setDuration] = useState('')
   const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
@@ -97,7 +98,7 @@ function BhajanForm() {
         .select('singer_name')
 
       const themes = [...new Set(bhajanData?.map(b => b.theme).filter(Boolean))].sort()
-      const ragas = [...new Set(bhajanData?.map(b => b.raga).filter(Boolean))].sort()
+      const ragas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
       const talas = [...new Set(bhajanData?.map(b => b.tala).filter(Boolean))].sort()
 
       const lyricists = [...new Set(writerData?.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name).filter(Boolean))].sort()
@@ -137,7 +138,7 @@ function BhajanForm() {
       setBhajanId(data.bhajan_id)
       setName(data.name || '')
       setTheme(data.theme || '')
-      setRaga(data.raga || '')
+      setRagas(data.raga ? data.raga.split(',').map(s => s.trim()).filter(Boolean) : [])
       setTala(data.tala || '')
       setDuration(data.duration_minutes || '')
       setYearOfRecording(data.year_of_recording || new Date().getFullYear())
@@ -282,7 +283,7 @@ function BhajanForm() {
         await supabase
           .from('bhajans')
           .update({
-            name, theme, raga, tala, duration_minutes, year_of_recording,
+            name, theme, raga: ragas.join(', '), tala, duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -300,7 +301,7 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, raga, tala, duration_minutes, year_of_recording,
+            name, theme, raga: ragas.join(', '), tala, duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -373,12 +374,12 @@ function BhajanForm() {
             </select>
           </div>
           <div className="form-group">
-            <label>Raga</label>
-            <SelectOrCreate
-              label="Raga"
-              value={raga}
+            <label>Raga(s)</label>
+            <TagInput
+              value={ragas}
               options={suggestions.ragas}
-              onChange={setRaga}
+              onChange={setRagas}
+              placeholder="Search or add raga(s)..."
             />
           </div>
           <div className="form-group">
