@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { supabase } from './config/supabase'
 import Header from './components/Header'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import BhajanForm from './pages/BhajanForm'
 import UserManagement from './pages/UserManagement'
@@ -58,8 +57,7 @@ function App() {
           ) : (
             <>
               <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="*" element={<Navigate to="/login" />} />
             </>
           )}
         </Routes>
