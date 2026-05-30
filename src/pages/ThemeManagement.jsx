@@ -208,7 +208,7 @@ function ThemeManagement() {
                     />
                   </div>
                   <div className="theme-bhajan-count">
-                    🎵 {themeBhajanCounts[theme.id] || 0} bhajan{themeBhajanCounts[theme.id] !== 1 ? 's' : ''}
+                    🎵 {themeBhajanCounts[theme.name] || 0} bhajan{themeBhajanCounts[theme.name] !== 1 ? 's' : ''}
                   </div>
                   <div className="theme-actions">
                     <button 
