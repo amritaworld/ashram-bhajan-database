@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../config/supabase'
+import { createClient } from '@supabase/supabase-js'
+import { supabase, SUPABASE_URL, SUPABASE_KEY } from '../config/supabase'
 import '../styles/Admin.css'
+
+// A separate client used only to sign up new users, so creating a user
+// does NOT replace the logged-in admin's session.
+const signupClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false }
+})
 
 function UserManagement({ user }) {
   const [users, setUsers] = useState([])
@@ -76,18 +83,19 @@ function UserManagement({ user }) {
           return
         }
 
-        const { data: { user: newUser }, error: authError } = await supabase.auth.admin.createUser({
+        const { data: signUpData, error: authError } = await signupClient.auth.signUp({
           email: formData.email,
-          password: formData.password,
-          email_confirm: true
+          password: formData.password
         })
 
         if (authError) throw authError
+        const newUserId = signUpData.user?.id
+        if (!newUserId) throw new Error('User could not be created')
 
         const { error: dbError } = await supabase
           .from('users')
           .insert([{
-            id: newUser.id,
+            id: newUserId,
             email: formData.email,
             display_name: formData.display_name,
             role: formData.role
