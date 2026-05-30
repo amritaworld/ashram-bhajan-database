@@ -234,7 +234,9 @@ function Dashboard({ user, userRole }) {
                   {(bhajan.raga || '').split(',').map(s => s.trim()).filter(Boolean).map(r => (
                     <span key={r} className="meta-badge">{r}</span>
                   ))}
-                  {bhajan.tala && <span className="meta-badge">{bhajan.tala}</span>}
+                  {(bhajan.tala || '').split(',').map(s => s.trim()).filter(Boolean).map(t => (
+                    <span key={t} className="meta-badge">{t}</span>
+                  ))}
                   <span className={`status-badge status-${bhajan.status}`}>
                     {bhajan.status.toUpperCase()}
                   </span>

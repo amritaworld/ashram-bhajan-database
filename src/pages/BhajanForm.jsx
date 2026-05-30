@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import AudioPlayer from '../components/AudioPlayer'
-import SelectOrCreate from '../components/SelectOrCreate'
 import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
@@ -13,7 +12,7 @@ function BhajanForm() {
   const [name, setName] = useState('')
   const [theme, setTheme] = useState('')
   const [ragas, setRagas] = useState([])
-  const [tala, setTala] = useState('')
+  const [talas, setTalas] = useState([])
   const [duration_minutes, setDuration] = useState('')
   const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
   const [lyrics_malayalam, setLyricsMalayalam] = useState('')
@@ -99,7 +98,7 @@ function BhajanForm() {
 
       const themes = [...new Set(bhajanData?.map(b => b.theme).filter(Boolean))].sort()
       const ragas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
-      const talas = [...new Set(bhajanData?.map(b => b.tala).filter(Boolean))].sort()
+      const talas = [...new Set((bhajanData || []).flatMap(b => (b.tala || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
 
       const lyricists = [...new Set(writerData?.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name).filter(Boolean))].sort()
       const composers = [...new Set(writerData?.filter(w => w.writer_role === 'composer').map(w => w.writer_name).filter(Boolean))].sort()
@@ -139,7 +138,7 @@ function BhajanForm() {
       setName(data.name || '')
       setTheme(data.theme || '')
       setRagas(data.raga ? data.raga.split(',').map(s => s.trim()).filter(Boolean) : [])
-      setTala(data.tala || '')
+      setTalas(data.tala ? data.tala.split(',').map(s => s.trim()).filter(Boolean) : [])
       setDuration(data.duration_minutes || '')
       setYearOfRecording(data.year_of_recording || new Date().getFullYear())
 
@@ -283,7 +282,7 @@ function BhajanForm() {
         await supabase
           .from('bhajans')
           .update({
-            name, theme, raga: ragas.join(', '), tala, duration_minutes, year_of_recording,
+            name, theme, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -301,7 +300,7 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, raga: ragas.join(', '), tala, duration_minutes, year_of_recording,
+            name, theme, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -383,12 +382,12 @@ function BhajanForm() {
             />
           </div>
           <div className="form-group">
-            <label>Tala</label>
-            <SelectOrCreate
-              label="Tala"
-              value={tala}
+            <label>Tala(s)</label>
+            <TagInput
+              value={talas}
               options={suggestions.talas}
-              onChange={setTala}
+              onChange={setTalas}
+              placeholder="Search or add tala(s)..."
             />
           </div>
         </div>
