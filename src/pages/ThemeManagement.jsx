@@ -60,8 +60,9 @@ function ThemeManagement() {
     }
 
     setLoading(true)
+    const isUpdate = editingId && editingId !== 'new'
     try {
-      if (editingId) {
+      if (isUpdate) {
         const { error } = await supabase
           .from('themes')
           .update(formData)
@@ -81,7 +82,7 @@ function ThemeManagement() {
       setEditingId(null)
       setSearchQuery('')
       await loadThemes()
-      alert(editingId ? 'Theme updated!' : 'Theme created!')
+      alert(isUpdate ? 'Theme updated!' : 'Theme created!')
     } catch (err) {
       alert('Error: ' + err.message)
     }
