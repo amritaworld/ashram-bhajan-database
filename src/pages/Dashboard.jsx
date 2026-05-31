@@ -24,6 +24,7 @@ function Dashboard({ user, userRole }) {
     draftBhajans: 0
   })
   const [themes, setThemes] = useState([])
+  const [themeColors, setThemeColors] = useState({})
   const [ragas, setRagas] = useState([])
   const [languages, setLanguages] = useState([])
   const [selectedBhajan, setSelectedBhajan] = useState(null)
@@ -32,7 +33,17 @@ function Dashboard({ user, userRole }) {
   useEffect(() => {
     loadBhajans()
     loadStats()
+    loadThemeColors()
   }, [])
+
+  const loadThemeColors = async () => {
+    const { data } = await supabase.from('themes').select('name, color')
+    if (data) {
+      const map = {}
+      data.forEach(t => { if (t.name) map[t.name] = t.color })
+      setThemeColors(map)
+    }
+  }
 
   useEffect(() => {
     filterBhajans()
@@ -260,7 +271,18 @@ function Dashboard({ user, userRole }) {
               <div className="bhajan-info">
                 <h3>{bhajan.name}</h3>
                 <div className="bhajan-meta">
-                  {bhajan.theme && <span className="meta-badge">{bhajan.theme}</span>}
+                  {bhajan.theme && (
+                    <span
+                      className="meta-badge theme-badge"
+                      style={themeColors[bhajan.theme] ? {
+                        backgroundColor: `${themeColors[bhajan.theme]}26`,
+                        color: themeColors[bhajan.theme],
+                        borderColor: `${themeColors[bhajan.theme]}80`
+                      } : undefined}
+                    >
+                      {bhajan.theme}
+                    </span>
+                  )}
                   {bhajan.language && <span className="meta-badge">{bhajan.language}</span>}
                   {(bhajan.raga || '').split(',').map(s => s.trim()).filter(Boolean).map(r => (
                     <span key={r} className="meta-badge">{r}</span>
