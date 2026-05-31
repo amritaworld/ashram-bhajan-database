@@ -5,6 +5,7 @@ import AudioPlayer from '../components/AudioPlayer'
 import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
+import ComboBox from '../components/ComboBox'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
@@ -404,17 +405,12 @@ function BhajanForm() {
         <div className="form-row">
           <div className="form-group">
             <label>Language</label>
-            <input
+            <ComboBox
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              list="languages-list"
-              placeholder="e.g. Malayalam, Sanskrit, Tamil..."
+              options={suggestions.languages}
+              onChange={setLanguage}
+              placeholder="Select or type a language..."
             />
-            <datalist id="languages-list">
-              {suggestions.languages.map(l => (
-                <option key={l} value={l} />
-              ))}
-            </datalist>
           </div>
           <div className="form-group">
             <label>Duration (min)</label>
