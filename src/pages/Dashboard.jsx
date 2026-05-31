@@ -15,6 +15,7 @@ function Dashboard({ user, userRole }) {
   const [filterRaga, setFilterRaga] = useState('')
   const [filterLanguage, setFilterLanguage] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterCopyright, setFilterCopyright] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 20
   const [stats, setStats] = useState({
@@ -47,7 +48,7 @@ function Dashboard({ user, userRole }) {
 
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, bhajans])
 
   const loadBhajans = async () => {
     setLoading(true)
@@ -117,6 +118,14 @@ function Dashboard({ user, userRole }) {
 
     if (filterStatus) {
       filtered = filtered.filter(b => b.status === filterStatus)
+    }
+
+    if (filterCopyright) {
+      filtered = filtered.filter(b =>
+        filterCopyright === 'approved'
+          ? b.copyright_status === 'approved'
+          : b.copyright_status !== 'approved'
+      )
     }
 
     setFilteredBhajans(filtered)
@@ -229,7 +238,17 @@ function Dashboard({ user, userRole }) {
             <option value="archived">Archived</option>
           </select>
 
-          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus) && (
+          <select
+            value={filterCopyright}
+            onChange={(e) => setFilterCopyright(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Copyrights</option>
+            <option value="approved">Copyrighted</option>
+            <option value="pending">Pending</option>
+          </select>
+
+          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus || filterCopyright) && (
             <button
               onClick={() => {
                 setSearchTerm('')
@@ -237,6 +256,7 @@ function Dashboard({ user, userRole }) {
                 setFilterRaga('')
                 setFilterLanguage('')
                 setFilterStatus('')
+                setFilterCopyright('')
               }}
               className="btn-secondary"
             >
