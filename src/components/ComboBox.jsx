@@ -4,14 +4,20 @@ import '../styles/TagInput.css'
 // Single-value combobox: pick from a list OR type a custom value.
 function ComboBox({ value = '', onChange, options = [], placeholder }) {
   const [open, setOpen] = useState(false)
+  // Only filter once the user starts typing; on focus, show the full list
+  // so they can browse/switch even when a value is already set (edit mode).
+  const [typing, setTyping] = useState(false)
   const blurTimer = useRef(null)
 
   const q = (value || '').toLowerCase().trim()
-  const matches = options.filter(o => (q ? o.toLowerCase().includes(q) : true))
-  const showAdd = q && !options.some(o => o.toLowerCase() === q)
+  const matches = (typing && q)
+    ? options.filter(o => o.toLowerCase().includes(q))
+    : options
+  const showAdd = typing && q && !options.some(o => o.toLowerCase() === q)
 
   const choose = (val) => {
     onChange(val)
+    setTyping(false)
     setOpen(false)
   }
 
@@ -19,8 +25,8 @@ function ComboBox({ value = '', onChange, options = [], placeholder }) {
     <div className="tag-input-field">
       <input
         value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
+        onChange={(e) => { onChange(e.target.value); setTyping(true); setOpen(true) }}
+        onFocus={() => { setTyping(false); setOpen(true) }}
         onBlur={() => { blurTimer.current = setTimeout(() => setOpen(false), 150) }}
         placeholder={placeholder || 'Select or type...'}
         autoComplete="off"
