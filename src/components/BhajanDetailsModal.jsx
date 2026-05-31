@@ -36,36 +36,65 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
 
   const loadContributors = async (bhajanId) => {
     try {
+      const lyricistNames = []
+      const composerNames = []
+      const singerNames = []
+      const seen = new Set() // role|name to avoid duplicates
+
+      const add = (arr, role, name) => {
+        if (!name) return
+        const trimmed = name.trim()
+        if (!trimmed) return
+        const key = role + '|' + trimmed.toLowerCase()
+        if (seen.has(key)) return
+        seen.add(key)
+        arr.push(trimmed)
+      }
+
+      // 1) Names typed on the bhajan form (lyricists/composers)
+      const { data: writers } = await supabase
+        .from('bhajan_writers')
+        .select('writer_name, writer_role')
+        .eq('bhajan_id', bhajanId)
+      ;(writers || []).forEach(w => {
+        if (w.writer_role === 'lyricist') add(lyricistNames, 'lyricist', w.writer_name)
+        else if (w.writer_role === 'composer') add(composerNames, 'composer', w.writer_name)
+      })
+
+      // 2) Singers typed on the bhajan form
+      const { data: bhajanSingers } = await supabase
+        .from('bhajan_singers')
+        .select('singer_name')
+        .eq('bhajan_id', bhajanId)
+      ;(bhajanSingers || []).forEach(s => add(singerNames, 'singer', s.singer_name))
+
+      // 3) Contributors linked via the registry (older bhajans)
       const { data: bhajanContributors } = await supabase
         .from('bhajan_contributors')
         .select('contributor_id, role')
         .eq('bhajan_id', bhajanId)
 
-      if (bhajanContributors) {
+      if (bhajanContributors && bhajanContributors.length > 0) {
         const contributorIds = [...new Set(bhajanContributors.map(c => c.contributor_id))]
-        
         const { data: contributorDetails } = await supabase
           .from('contributors')
           .select('id, name')
           .in('id', contributorIds)
-
-        const lyricists = bhajanContributors
-          .filter(c => c.role === 'lyricist')
-          .map(c => contributorDetails.find(cd => cd.id === c.contributor_id))
-          .filter(Boolean)
-
-        const composers = bhajanContributors
-          .filter(c => c.role === 'composer')
-          .map(c => contributorDetails.find(cd => cd.id === c.contributor_id))
-          .filter(Boolean)
-
-        const singers = bhajanContributors
-          .filter(c => c.role === 'singer')
-          .map(c => contributorDetails.find(cd => cd.id === c.contributor_id))
-          .filter(Boolean)
-
-        setContributors({ lyricists, composers, singers })
+        const nameById = {}
+        ;(contributorDetails || []).forEach(cd => { nameById[cd.id] = cd.name })
+        bhajanContributors.forEach(c => {
+          const name = nameById[c.contributor_id]
+          if (c.role === 'lyricist') add(lyricistNames, 'lyricist', name)
+          else if (c.role === 'composer') add(composerNames, 'composer', name)
+          else if (c.role === 'singer') add(singerNames, 'singer', name)
+        })
       }
+
+      setContributors({
+        lyricists: lyricistNames.map(name => ({ name })),
+        composers: composerNames.map(name => ({ name })),
+        singers: singerNames.map(name => ({ name }))
+      })
     } catch (err) {
       console.error('Error loading contributors:', err)
     }
