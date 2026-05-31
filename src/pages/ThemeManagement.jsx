@@ -62,14 +62,20 @@ function ThemeManagement() {
     setLoading(true)
     try {
       if (editingId) {
-        await supabase
+        const { error } = await supabase
           .from('themes')
           .update(formData)
           .eq('id', editingId)
+        if (error) throw error
       } else {
-        await supabase
+        const { data, error } = await supabase
           .from('themes')
           .insert([formData])
+          .select()
+        if (error) throw error
+        if (!data || data.length === 0) {
+          throw new Error('Theme was not saved. The database blocked it (missing insert permission on the themes table).')
+        }
       }
       setFormData({ name: '', color: '#d6a84f', thumbnail_url: '' })
       setEditingId(null)
