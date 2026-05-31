@@ -289,3 +289,13 @@
 .theme-badge {
   border: 1px solid transparent;
 }
+
+.copyright-pending {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+}
+
+.copyright-approved {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}

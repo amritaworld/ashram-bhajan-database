@@ -286,8 +286,8 @@ function Dashboard({ user, userRole }) {
                   {(bhajan.tala || '').split(',').map(s => s.trim()).filter(Boolean).map(t => (
                     <span key={t} className="meta-badge">{t}</span>
                   ))}
-                  <span className={`status-badge status-${bhajan.status}`}>
-                    {bhajan.status.toUpperCase()}
+                  <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
+                    {bhajan.copyright_status === 'approved' ? 'COPYRIGHTED' : 'PENDING'}
                   </span>
                 </div>
                 {bhajan.duration_minutes && (
