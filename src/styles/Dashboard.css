@@ -265,3 +265,23 @@
     flex: 1;
   }
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  margin: 2rem;
+  padding-bottom: 1rem;
+}
+
+.pagination-info {
+  color: #a7a7a7;
+  font-size: 0.9rem;
+  min-width: 120px;
+  text-align: center;
+}
+
+.pagination .btn-secondary {
+  padding: 0.5rem 1.1rem;
+}

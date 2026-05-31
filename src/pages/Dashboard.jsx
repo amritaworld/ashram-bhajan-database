@@ -13,7 +13,10 @@ function Dashboard({ user, userRole }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterTheme, setFilterTheme] = useState('')
   const [filterRaga, setFilterRaga] = useState('')
+  const [filterLanguage, setFilterLanguage] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 20
   const [stats, setStats] = useState({
     totalBhajans: 0,
     totalWriters: 0,
@@ -22,6 +25,7 @@ function Dashboard({ user, userRole }) {
   })
   const [themes, setThemes] = useState([])
   const [ragas, setRagas] = useState([])
+  const [languages, setLanguages] = useState([])
   const [selectedBhajan, setSelectedBhajan] = useState(null)
   const [selectedLyrics, setSelectedLyrics] = useState(null)
 
@@ -32,7 +36,7 @@ function Dashboard({ user, userRole }) {
 
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterRaga, filterStatus, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, bhajans])
 
   const loadBhajans = async () => {
     setLoading(true)
@@ -73,6 +77,9 @@ function Dashboard({ user, userRole }) {
 
       const uniqueRagas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
       setRagas(uniqueRagas)
+
+      const uniqueLanguages = [...new Set((bhajanData || []).map(b => b.language).filter(Boolean))].sort()
+      setLanguages(uniqueLanguages)
     } catch (err) {
       console.error('Error loading stats:', err)
     }
@@ -97,11 +104,16 @@ function Dashboard({ user, userRole }) {
       )
     }
 
+    if (filterLanguage) {
+      filtered = filtered.filter(b => b.language === filterLanguage)
+    }
+
     if (filterStatus) {
       filtered = filtered.filter(b => b.status === filterStatus)
     }
 
     setFilteredBhajans(filtered)
+    setCurrentPage(1)
   }
 
   const handleDelete = async (id) => {
@@ -111,6 +123,10 @@ function Dashboard({ user, userRole }) {
       alert('Bhajan deleted')
     }
   }
+
+  const totalPages = Math.max(1, Math.ceil(filteredBhajans.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const pageItems = filteredBhajans.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   return (
     <div className="dashboard">
@@ -185,6 +201,17 @@ function Dashboard({ user, userRole }) {
           </select>
 
           <select
+            value={filterLanguage}
+            onChange={(e) => setFilterLanguage(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Languages</option>
+            {languages.map(lang => (
+              <option key={lang} value={lang}>{lang}</option>
+            ))}
+          </select>
+
+          <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="filter-select"
@@ -195,12 +222,13 @@ function Dashboard({ user, userRole }) {
             <option value="archived">Archived</option>
           </select>
 
-          {(searchTerm || filterTheme || filterRaga || filterStatus) && (
+          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus) && (
             <button
               onClick={() => {
                 setSearchTerm('')
                 setFilterTheme('')
                 setFilterRaga('')
+                setFilterLanguage('')
                 setFilterStatus('')
               }}
               className="btn-secondary"
@@ -212,7 +240,9 @@ function Dashboard({ user, userRole }) {
       </div>
 
       <div className="results-info">
-        Showing {filteredBhajans.length} of {bhajans.length} bhajans
+        Showing {filteredBhajans.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}
+        –{Math.min(safePage * PAGE_SIZE, filteredBhajans.length)} of {filteredBhajans.length}
+        {filteredBhajans.length !== bhajans.length ? ` (filtered from ${bhajans.length})` : ''}
       </div>
 
       {loading ? (
@@ -225,12 +255,13 @@ function Dashboard({ user, userRole }) {
         </div>
       ) : (
         <div className="bhajans-list">
-          {filteredBhajans.map(bhajan => (
+          {pageItems.map(bhajan => (
             <div key={bhajan.id} className="bhajan-item">
               <div className="bhajan-info">
                 <h3>{bhajan.name}</h3>
                 <div className="bhajan-meta">
                   {bhajan.theme && <span className="meta-badge">{bhajan.theme}</span>}
+                  {bhajan.language && <span className="meta-badge">{bhajan.language}</span>}
                   {(bhajan.raga || '').split(',').map(s => s.trim()).filter(Boolean).map(r => (
                     <span key={r} className="meta-badge">{r}</span>
                   ))}
@@ -273,6 +304,26 @@ function Dashboard({ user, userRole }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!loading && totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="btn-secondary"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+          >
+            ← Prev
+          </button>
+          <span className="pagination-info">Page {safePage} of {totalPages}</span>
+          <button
+            className="btn-secondary"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+          >
+            Next →
+          </button>
         </div>
       )}
 

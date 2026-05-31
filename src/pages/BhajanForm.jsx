@@ -11,6 +11,7 @@ function BhajanForm() {
   const { id } = useParams()
   const [name, setName] = useState('')
   const [theme, setTheme] = useState('')
+  const [language, setLanguage] = useState('')
   const [ragas, setRagas] = useState([])
   const [talas, setTalas] = useState([])
   const [duration_minutes, setDuration] = useState('')
@@ -38,6 +39,7 @@ function BhajanForm() {
     themes: [],
     ragas: [],
     talas: [],
+    languages: [],
     lyricists: [],
     composers: [],
     singers: []
@@ -86,7 +88,7 @@ function BhajanForm() {
     try {
       const { data: bhajanData } = await supabase
         .from('bhajans')
-        .select('theme, raga, tala')
+        .select('theme, raga, tala, language')
 
       const { data: writerData } = await supabase
         .from('bhajan_writers')
@@ -99,6 +101,8 @@ function BhajanForm() {
       const themes = [...new Set(bhajanData?.map(b => b.theme).filter(Boolean))].sort()
       const ragas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
       const talas = [...new Set((bhajanData || []).flatMap(b => (b.tala || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
+      const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
+      const languages = [...new Set([...COMMON_LANGUAGES, ...(bhajanData || []).map(b => b.language).filter(Boolean)])].sort()
 
       const lyricists = [...new Set(writerData?.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name).filter(Boolean))].sort()
       const composers = [...new Set(writerData?.filter(w => w.writer_role === 'composer').map(w => w.writer_name).filter(Boolean))].sort()
@@ -108,6 +112,7 @@ function BhajanForm() {
         themes,
         ragas,
         talas,
+        languages,
         lyricists,
         composers,
         singers
@@ -137,6 +142,7 @@ function BhajanForm() {
       setBhajanId(data.bhajan_id)
       setName(data.name || '')
       setTheme(data.theme || '')
+    setLanguage(data.language || '')
       setRagas(data.raga ? data.raga.split(',').map(s => s.trim()).filter(Boolean) : [])
       setTalas(data.tala ? data.tala.split(',').map(s => s.trim()).filter(Boolean) : [])
       setDuration(data.duration_minutes || '')
@@ -282,7 +288,7 @@ function BhajanForm() {
         await supabase
           .from('bhajans')
           .update({
-            name, theme, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -300,7 +306,7 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -394,6 +400,20 @@ function BhajanForm() {
 
         <div className="form-row">
           <div className="form-group">
+            <label>Language</label>
+            <input
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              list="languages-list"
+              placeholder="e.g. Malayalam, Sanskrit, Tamil..."
+            />
+            <datalist id="languages-list">
+              {suggestions.languages.map(l => (
+                <option key={l} value={l} />
+              ))}
+            </datalist>
+          </div>
+          <div className="form-group">
             <label>Duration (min)</label>
             <input type="number" value={duration_minutes} onChange={(e) => setDuration(e.target.value)} step="0.1" />
           </div>
@@ -470,6 +490,7 @@ function BhajanForm() {
                 {uploadingAudio ? 'Uploading...' : 'Click to upload audio'}
               </span>
               <span className="upload-hint">MP3, WAV, M4A — you can select multiple files</span>
+            <span className="upload-hint" style={{ marginTop: '0.4rem', color: '#d6a84f' }}>💡 Tip: convert/compress to MP3 (~128 kbps) before uploading to save storage</span>
             </label>
           </div>
         </div>
