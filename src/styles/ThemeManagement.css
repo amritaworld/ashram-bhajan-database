@@ -327,3 +327,42 @@
   margin-bottom: 0.75rem;
   padding: 0.5rem 0;
 }
+
+/* Thumbnail upload controls */
+.thumbnail-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.file-upload {
+  position: relative;
+}
+
+.file-upload-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.1rem;
+  background: rgba(214, 168, 79, 0.1);
+  border: 1.5px dashed #3a3a42;
+  border-radius: 0.5rem;
+  color: #d6a84f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.file-upload-btn:hover {
+  border-color: #d6a84f;
+  background: rgba(214, 168, 79, 0.16);
+}

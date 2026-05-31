@@ -10,6 +10,7 @@ function ThemeManagement() {
   const [searchQuery, setSearchQuery] = useState('')
   const [formData, setFormData] = useState({ name: '', color: '#d6a84f', thumbnail_url: '' })
   const [user, setUser] = useState(null)
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false)
 
   useEffect(() => {
     getUser()
@@ -81,6 +82,38 @@ function ThemeManagement() {
     setLoading(false)
   }
 
+  const handleThumbnailUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploadingThumbnail(true)
+    try {
+      const safeName = (formData.name || 'theme').trim().replace(/[^a-z0-9]+/gi, '-').toLowerCase()
+      const fileName = `${Date.now()}-${file.name}`
+      const filePath = `${safeName}/${fileName}`
+
+      const { error } = await supabase.storage
+        .from('theme-images')
+        .upload(filePath, file, { upsert: false })
+
+      if (error) throw error
+
+      const { data: publicUrlData } = supabase.storage
+        .from('theme-images')
+        .getPublicUrl(filePath)
+
+      setFormData(prev => ({ ...prev, thumbnail_url: publicUrlData.publicUrl }))
+    } catch (err) {
+      alert('Error uploading thumbnail: ' + err.message)
+    } finally {
+      setUploadingThumbnail(false)
+    }
+  }
+
+  const handleDeleteThumbnail = () => {
+    setFormData(prev => ({ ...prev, thumbnail_url: '' }))
+  }
+
   const handleEdit = (theme) => {
     setEditingId(theme.id)
     setFormData({ name: theme.name, color: theme.color, thumbnail_url: theme.thumbnail_url })
@@ -142,20 +175,33 @@ function ThemeManagement() {
             </div>
           </div>
           <div className="form-group">
-            <label>Thumbnail URL</label>
-            <input
-              type="text"
-              value={formData.thumbnail_url}
-              onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
-          {formData.thumbnail_url && (
-            <div className="thumbnail-preview">
-              <p>Preview:</p>
-              <img src={formData.thumbnail_url} alt="Theme thumbnail" />
+            <label>Thumbnail</label>
+            {formData.thumbnail_url && (
+              <div className="thumbnail-preview">
+                <img src={formData.thumbnail_url} alt="Theme thumbnail" />
+              </div>
+            )}
+            <div className="thumbnail-actions">
+              <div className="file-upload">
+                <input
+                  id="theme-thumbnail-input"
+                  className="file-upload-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbnailUpload}
+                  disabled={uploadingThumbnail}
+                />
+                <label htmlFor="theme-thumbnail-input" className="file-upload-btn">
+                  🖼️ {uploadingThumbnail ? 'Uploading...' : (formData.thumbnail_url ? 'Replace image' : 'Choose image')}
+                </label>
+              </div>
+              {formData.thumbnail_url && (
+                <button type="button" onClick={handleDeleteThumbnail} className="btn-delete">
+                  Remove
+                </button>
+              )}
             </div>
-          )}
+          </div>
           <div className="form-actions">
             <button onClick={handleSave} disabled={loading} className="btn-save">
               {loading ? 'Saving...' : 'Save'}
