@@ -380,7 +380,7 @@ function ContributorManagement() {
       </div>
 
       {loading ? (
-        <div className="loading">Loading contributors...</div>
+        <Spinner label="Loading contributors" />
       ) : filteredContributors.length === 0 ? (
         <div className="no-results">
           {contributors.length === 0

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../config/supabase'
+import Spinner from './Spinner'
 import '../styles/NOCGenerator.css'
 
 function NOCGenerator({ bhajanId, bhajanName, onClose }) {
@@ -184,9 +185,10 @@ I hereby declare that:
       <div className="noc-modal-overlay" onClick={onClose}>
         <div className="noc-modal" onClick={(e) => e.stopPropagation()}>
           <div className="noc-modal-header">
-            <h2>Loading NOC...</h2>
+            <h2>No Objection Certificate</h2>
             <button className="noc-close" onClick={onClose}>✕</button>
           </div>
+          <Spinner label="Generating NOC" />
         </div>
       </div>,
       document.body

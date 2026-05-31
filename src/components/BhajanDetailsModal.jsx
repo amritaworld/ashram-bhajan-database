@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
 import ActivityLog from './ActivityLog'
 import AudioPlayer from './AudioPlayer'
+import Spinner from './Spinner'
 import '../styles/BhajanDetailsModal.css'
 
 function BhajanDetailsModal({ bhajanId, onClose }) {
@@ -133,7 +134,7 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
     }
   }
 
-  if (loading) return <div className="modal-overlay"><div className="modal-content">Loading...</div></div>
+  if (loading) return <div className="modal-overlay"><div className="modal-content"><Spinner label="Loading" /></div></div>
   if (!bhajan) return <div className="modal-overlay"><div className="modal-content">Bhajan not found</div></div>
 
   const statusColor = {

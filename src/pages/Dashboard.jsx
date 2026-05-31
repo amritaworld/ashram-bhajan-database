@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import BhajanDetailsModal from '../components/BhajanDetailsModal'
 import LyricsModal from '../components/LyricsModal'
+import Spinner from '../components/Spinner'
 import '../styles/Dashboard.css'
 
 function Dashboard({ user, userRole }) {
@@ -273,7 +274,7 @@ function Dashboard({ user, userRole }) {
       </div>
 
       {loading ? (
-        <div className="loading">Loading bhajans...</div>
+        <Spinner label="Loading bhajans" />
       ) : filteredBhajans.length === 0 ? (
         <div className="no-results">
           {bhajans.length === 0

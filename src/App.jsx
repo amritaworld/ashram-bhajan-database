@@ -8,6 +8,7 @@ import BhajanForm from './pages/BhajanForm'
 import UserManagement from './pages/UserManagement'
 import ThemeManagement from './pages/ThemeManagement'
 import ContributorManagement from './pages/ContributorManagement'
+import Spinner from './components/Spinner'
 import './App.css'
 
 function App() {
