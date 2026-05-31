@@ -151,36 +151,26 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
             </div>
           </div>
 
-          {contributors.lyricists.length > 0 && (
+          {(contributors.lyricists.length > 0 || contributors.composers.length > 0 || contributors.singers.length > 0) && (
             <div className="contributors-section">
-              <h3>🎵 Lyricists</h3>
-              <ul>
-                {contributors.lyricists.map(c => (
-                  <li key={c.id}>{c.name}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {contributors.composers.length > 0 && (
-            <div className="contributors-section">
-              <h3>🎼 Composers</h3>
-              <ul>
-                {contributors.composers.map(c => (
-                  <li key={c.id}>{c.name}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {contributors.singers.length > 0 && (
-            <div className="contributors-section">
-              <h3>🎤 Singers</h3>
-              <ul>
-                {contributors.singers.map(c => (
-                  <li key={c.id}>{c.name}</li>
-                ))}
-              </ul>
+              {contributors.lyricists.length > 0 && (
+                <div className="contributor-line">
+                  <span className="contributor-role">Lyricists</span>
+                  <span className="contributor-names">{contributors.lyricists.map(c => c.name).join(', ')}</span>
+                </div>
+              )}
+              {contributors.composers.length > 0 && (
+                <div className="contributor-line">
+                  <span className="contributor-role">Composers</span>
+                  <span className="contributor-names">{contributors.composers.map(c => c.name).join(', ')}</span>
+                </div>
+              )}
+              {contributors.singers.length > 0 && (
+                <div className="contributor-line">
+                  <span className="contributor-role">Singers</span>
+                  <span className="contributor-names">{contributors.singers.map(c => c.name).join(', ')}</span>
+                </div>
+              )}
             </div>
           )}
 
