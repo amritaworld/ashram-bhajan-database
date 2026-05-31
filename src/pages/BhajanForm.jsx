@@ -6,6 +6,8 @@ import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
 
+const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
+
 function BhajanForm() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -88,7 +90,7 @@ function BhajanForm() {
     try {
       const { data: bhajanData } = await supabase
         .from('bhajans')
-        .select('theme, raga, tala, language')
+        .select('theme, raga, tala')
 
       const { data: writerData } = await supabase
         .from('bhajan_writers')
@@ -101,8 +103,7 @@ function BhajanForm() {
       const themes = [...new Set(bhajanData?.map(b => b.theme).filter(Boolean))].sort()
       const ragas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
       const talas = [...new Set((bhajanData || []).flatMap(b => (b.tala || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
-      const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
-      const languages = [...new Set([...COMMON_LANGUAGES, ...(bhajanData || []).map(b => b.language).filter(Boolean)])].sort()
+      const languages = [...COMMON_LANGUAGES].sort()
 
       const lyricists = [...new Set(writerData?.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name).filter(Boolean))].sort()
       const composers = [...new Set(writerData?.filter(w => w.writer_role === 'composer').map(w => w.writer_name).filter(Boolean))].sort()
@@ -285,7 +286,7 @@ function BhajanForm() {
       let savedId = id
 
       if (id) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('bhajans')
           .update({
             name, theme, language, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
@@ -298,6 +299,8 @@ function BhajanForm() {
             updated_by: user?.id
           })
           .eq('id', id)
+
+        if (updateError) throw updateError
 
         await supabase.from('bhajan_writers').delete().eq('bhajan_id', id)
         await supabase.from('bhajan_singers').delete().eq('bhajan_id', id)
