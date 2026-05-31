@@ -19,8 +19,8 @@ function Dashboard({ user, userRole }) {
   const PAGE_SIZE = 20
   const [stats, setStats] = useState({
     totalBhajans: 0,
-    totalWriters: 0,
-    totalSingers: 0,
+    totalContributors: 0,
+    approvedCopyrights: 0,
     draftBhajans: 0
   })
   const [themes, setThemes] = useState([])
@@ -68,18 +68,14 @@ function Dashboard({ user, userRole }) {
         .from('bhajans')
         .select('*')
 
-      const { data: writerData } = await supabase
-        .from('bhajan_writers')
-        .select('*')
-
-      const { data: singerData } = await supabase
-        .from('bhajan_singers')
-        .select('*')
+      const { data: contributorData } = await supabase
+        .from('contributors')
+        .select('id')
 
       setStats({
         totalBhajans: bhajanData?.length || 0,
-        totalWriters: writerData?.length || 0,
-        totalSingers: singerData?.length || 0,
+        totalContributors: contributorData?.length || 0,
+        approvedCopyrights: bhajanData?.filter(b => b.copyright_status === 'approved').length || 0,
         draftBhajans: bhajanData?.filter(b => b.status === 'draft').length || 0
       })
 
@@ -155,17 +151,17 @@ function Dashboard({ user, userRole }) {
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">✍️</div>
+          <div className="stat-icon">👥</div>
           <div className="stat-content">
-            <p className="stat-label">Lyricists & Composers</p>
-            <p className="stat-value">{stats.totalWriters}</p>
+            <p className="stat-label">Contributors</p>
+            <p className="stat-value">{stats.totalContributors}</p>
           </div>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">🎤</div>
+          <div className="stat-icon">✅</div>
           <div className="stat-content">
-            <p className="stat-label">Singers</p>
-            <p className="stat-value">{stats.totalSingers}</p>
+            <p className="stat-label">Approved Copyrights</p>
+            <p className="stat-value">{stats.approvedCopyrights}</p>
           </div>
         </div>
         <div className="stat-card">
