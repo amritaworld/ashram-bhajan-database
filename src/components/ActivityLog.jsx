@@ -53,7 +53,7 @@ function ActivityLog({ bhajanId }) {
       <h3>Activity Log</h3>
 
       {loading ? (
-        <div className="loading">Loading activities...</div>
+        <Spinner label="Loading activity" />
       ) : activities.length === 0 ? (
         <div className="no-activities">No activities yet</div>
       ) : (

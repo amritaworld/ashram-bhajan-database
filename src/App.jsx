@@ -38,7 +38,7 @@ function App() {
     setLoading(false)
   }
 
-  if (loading) return <div style={{ padding: '2rem' }}>Loading...</div>
+  if (loading) return <Spinner label="Loading" fullscreen />
 
   return (
     <Router>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { supabase, SUPABASE_URL, SUPABASE_KEY } from '../config/supabase'
+import Spinner from '../components/Spinner'
 import '../styles/Admin.css'
 
 // A separate client used only to sign up new users, so creating a user
@@ -226,7 +227,7 @@ function UserManagement({ user }) {
       )}
 
       {loading ? (
-        <div className="loading">Loading users...</div>
+        <Spinner label="Loading users" />
       ) : users.length === 0 ? (
         <div className="no-results">No users found. Create one to get started!</div>
       ) : (
