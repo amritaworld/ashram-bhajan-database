@@ -82,9 +82,25 @@ function BulkImport({ user }) {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
+
     const items = Array.from(e.dataTransfer.items || [])
-    const picked = await collectDocxFiles(items)
-    await processFiles(picked)
+
+    // Try to get files directly first (simpler fallback)
+    const directFiles = items
+      .map((item) => {
+        if (item.kind === 'file') {
+          return item.getAsFile()
+        }
+        return null
+      })
+      .filter(Boolean)
+
+    if (directFiles.length > 0) {
+      await processFiles(directFiles)
+    } else {
+      const picked = await collectDocxFiles(items)
+      await processFiles(picked)
+    }
   }
 
   const doImport = async (picked) => {

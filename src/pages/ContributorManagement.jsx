@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
+import Spinner from '../components/Spinner'
 import '../styles/ContributorManagement.css'
 
 function ContributorManagement() {
