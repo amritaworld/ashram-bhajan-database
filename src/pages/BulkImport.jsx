@@ -30,6 +30,7 @@ function BulkImport({ user }) {
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [summary, setSummary] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [skipDuplicates, setSkipDuplicates] = useState(true)
 
   const collectDocxFiles = async (items) => {
     const files = []
@@ -114,11 +115,13 @@ function BulkImport({ user }) {
       async (file) => {
         const relPath = file.webkitRelativePath || file.name
         const isReview = /(^|\/)_REVIEW\//i.test(relPath)
+        const fileDate = new Date(file.lastModified)
+        const dateStr = fileDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         try {
           const data = await parseDocx(file)
-          return { fileName: file.name, relPath, isReview, data }
+          return { fileName: file.name, relPath, isReview, data, fileDate: dateStr }
         } catch (err) {
-          return { fileName: file.name, relPath, isReview, parseError: err.message }
+          return { fileName: file.name, relPath, isReview, parseError: err.message, fileDate: dateStr }
         }
       },
       (done) => setProgress((p) => ({ ...p, done }))
@@ -186,7 +189,10 @@ function BulkImport({ user }) {
     (acc, r) => ((acc[r.status] = (acc[r.status] || 0) + 1), acc),
     {}
   )
-  const importable = rows.filter((r) => r.status === 'ok' || r.status === 'warn')
+  const importable = rows.filter((r) => {
+    if (skipDuplicates && r.status === 'duplicate') return false
+    return r.status === 'ok' || r.status === 'warn'
+  })
 
   const buildRecord = (r) => ({
     bhajan_id: r.slug,
@@ -318,8 +324,19 @@ function BulkImport({ user }) {
             <div className="import-counts">
               <span className="count-chip ok">{counts.ok || 0} ready</span>
               <span className="count-chip warn">{counts.warn || 0} with warnings</span>
-              <span className="count-chip dup">{counts.duplicate || 0} duplicates (skip)</span>
-              <span className="count-chip err">{counts.error || 0} errors (skip)</span>
+              <span className="count-chip dup">{counts.duplicate || 0} duplicates</span>
+              <span className="count-chip err">{counts.error || 0} errors</span>
+            </div>
+
+            <div className="import-options">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={skipDuplicates}
+                  onChange={(e) => setSkipDuplicates(e.target.checked)}
+                />
+                Skip duplicates automatically
+              </label>
             </div>
 
             <div className="import-table-wrap">
@@ -328,6 +345,7 @@ function BulkImport({ user }) {
                   <tr>
                     <th></th>
                     <th>File</th>
+                    <th>Date Modified</th>
                     <th>Title</th>
                     <th>Language</th>
                     <th>Notes</th>
@@ -338,6 +356,7 @@ function BulkImport({ user }) {
                     <tr key={i} className={`row-${r.status}`}>
                       <td className="row-status">{statusIcon(r.status)}</td>
                       <td className="row-file" title={r.relPath}>{r.fileName}</td>
+                      <td className="row-date">{r.fileDate}</td>
                       <td>{r.title || <em>—</em>}</td>
                       <td>{r.data?.language || <em>—</em>}</td>
                       <td className="row-notes">{r.messages.join(', ')}</td>
@@ -354,6 +373,7 @@ function BulkImport({ user }) {
                 disabled={!importable.length}
               >
                 Import {importable.length} draft{importable.length === 1 ? '' : 's'}
+                {skipDuplicates && counts.duplicate ? ` (skipping ${counts.duplicate} duplicate${counts.duplicate === 1 ? '' : 's'})` : ''}
               </button>
               <button className="btn-secondary" onClick={reset}>Cancel</button>
             </div>

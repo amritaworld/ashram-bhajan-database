@@ -97,7 +97,11 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('COLUMNS:', sorted\\(d[0].keys\\(\\)\\)\\) if d else print\\('NO ROWS / response:', d\\)\")",
       "Bash(cp /tmp/testparse.mjs ./testparse.mjs)",
       "Bash(node ./testparse.mjs ~/bhajan-pipeline/output/full/\"Aadi Parashakti Aadi Parashakti.docx\" ~/bhajan-pipeline/output/full/\"Engupoi.docx\" ~/bhajan-pipeline/output/full/_REVIEW/\"Aa E Oo.docx\")",
-      "Bash(node -c src/pages/BulkImport.jsx)"
+      "Bash(node -c src/pages/BulkImport.jsx)",
+      "Bash(awk '{print \"PID\", $2, \"running\"}')",
+      "Bash(chmod +x ~/bhajan-pipeline/watch_done.sh)",
+      "Bash(nohup ~/bhajan-pipeline/watch_done.sh)",
+      "Bash(echo \"watcher launched PID $! — will pop a macOS banner when the run finishes\")"
     ]
   }
 }

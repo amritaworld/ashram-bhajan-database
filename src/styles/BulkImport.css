@@ -95,11 +95,36 @@
   padding: 3rem 0;
 }
 
+/* Import options */
+.import-options {
+  margin: 1rem 0 1.5rem 0;
+  padding: 0.75rem;
+  background: rgba(214, 168, 79, 0.05);
+  border: 1px solid rgba(214, 168, 79, 0.2);
+  border-radius: 6px;
+}
+
+.import-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+}
+
+.import-options input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
 /* Count chips */
 .import-counts {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+  margin: 2rem 0 0 0;
   margin-bottom: 1.25rem;
 }
 
@@ -180,14 +205,22 @@
 
 .row-file {
   color: #9ca3af;
-  max-width: 240px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.row-date {
+  color: #6b7280;
+  font-size: 0.8rem;
+  width: 90px;
+  white-space: nowrap;
+}
+
 .row-notes {
   color: #9ca3af;
+  font-size: 0.8rem;
 }
 
 .row-error td,
