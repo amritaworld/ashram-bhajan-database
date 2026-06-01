@@ -6,6 +6,7 @@ import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
 import ComboBox from '../components/ComboBox'
+import BhajanSearch from '../components/BhajanSearch'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
@@ -15,6 +16,7 @@ function BhajanForm() {
   const [name, setName] = useState('')
   const [theme, setTheme] = useState('')
   const [language, setLanguage] = useState('')
+  const [originalBhajanId, setOriginalBhajanId] = useState('')
   const [ragas, setRagas] = useState([])
   const [talas, setTalas] = useState([])
   const [duration_minutes, setDuration] = useState('')
@@ -68,6 +70,7 @@ function BhajanForm() {
       console.error('Error loading contributors:', err)
     }
   }
+
 
   const loadThemes = async () => {
     try {
@@ -144,7 +147,8 @@ function BhajanForm() {
       setBhajanId(data.bhajan_id)
       setName(data.name || '')
       setTheme(data.theme || '')
-    setLanguage(data.language || '')
+      setLanguage(data.language || '')
+      setOriginalBhajanId(data.original_bhajan_id || '')
       setRagas(data.raga ? data.raga.split(',').map(s => s.trim()).filter(Boolean) : [])
       setTalas(data.tala ? data.tala.split(',').map(s => s.trim()).filter(Boolean) : [])
       setDuration(data.duration_minutes || '')
@@ -299,6 +303,7 @@ function BhajanForm() {
             copyright_holder: copyrightHolder,
             copyright_status: copyrightStatus,
             license_type: licenseType,
+            original_bhajan_id: originalBhajanId || null,
             updated_by: user?.id
           })
           .eq('id', id)
@@ -321,6 +326,7 @@ function BhajanForm() {
             copyright_holder: copyrightHolder,
             copyright_status: copyrightStatus,
             license_type: licenseType,
+            original_bhajan_id: originalBhajanId || null,
             created_by: user?.id
           }])
           .select()
@@ -414,6 +420,15 @@ function BhajanForm() {
               options={suggestions.languages}
               onChange={setLanguage}
               placeholder="Select or type a language..."
+            />
+          </div>
+          <div className="form-group">
+            <label>Linked Original Version</label>
+            <BhajanSearch
+              value={originalBhajanId}
+              onChange={setOriginalBhajanId}
+              excludeId={id}
+              placeholder="Search for original bhajan (optional)..."
             />
           </div>
           <div className="form-group">
