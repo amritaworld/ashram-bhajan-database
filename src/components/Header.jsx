@@ -54,6 +54,12 @@ function Header({ userRole }) {
               >
                 Contributors
               </button>
+              <button
+                onClick={() => handleNavigation('/import')}
+                className={`nav-link ${isActive('/import') ? 'active' : ''}`}
+              >
+                Import
+              </button>
             </>
           )}
           {userRole === 'admin' && (
