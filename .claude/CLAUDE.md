@@ -39,24 +39,35 @@
 
 ### Feature #1: Bulk Bhajan Import ✅
 - Page: `/import`
-- Upload multiple .docx files (folder picker or drag-and-drop)
+- Upload multiple .docx files (folder picker, file multi-select, or drag-and-drop)
 - Each DOCX has 6 labelled sections: Title, Language, Malayalam Lyrics, Malayalam Meaning, English Lyrics, English Meaning
 - Parses client-side, shows preview table (ok/warn/duplicate/error)
+- File modification dates visible in preview
+- Auto-skip duplicates checkbox (checked by default)
 - Creates draft bhajans, dedupes, tags _REVIEW files
-- Chunked import with per-row error handling
+- Chunked import (50 at a time) with per-row error handling
 
-**Known issues & fixes:**
-- Drag-and-drop: FileEntry.file() requires callback (fixed in last commit)
-- Numeric fields: Convert empty strings to null (fixed in last commit)
+**Features:**
+- ✅ Drag-and-drop support (folder or individual files)
+- ✅ Duplicate detection (DB + batch)
+- ✅ File date display (helps identify old vs new uploads)
+- ✅ Numeric field validation (empty → null, not empty string)
 
 ---
 
-## Feature #2: Tune Groups / Linked Translations (Next)
-Requirements:
-- Add "original version" selector field in Add/Edit Bhajan form
-- A translation can point to its original bhajan (e.g., Malayalam original → Tamil translation)
-- Display all linked language versions together as one "tune group"
-- Admin (user) usually knows which is the original
+### Feature #2: Tune Groups / Linked Translations ✅
+- Add "original version" searchable selector in Add/Edit Bhajan form
+- Uses `BhajanSearch` component (fetches results as user types)
+- A translation can link to its original bhajan (e.g., Malayalam original → Tamil translation)
+- Display all linked language versions in bhajan details modal as one "tune group"
+- Shows: 🔵 Original | 🔗 Translations | (current) badge
+
+**Features:**
+- ✅ Searchable original selection (BhajanSearch component)
+- ✅ Load/save original_bhajan_id correctly
+- ✅ Tune group display in details modal
+- ✅ Malayalam lyrics search on Dashboard (first line matching)
+- ✅ Search by bhajan name OR opening words of Malayalam lyrics
 
 ---
 
