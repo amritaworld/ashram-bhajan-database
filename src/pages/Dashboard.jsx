@@ -98,9 +98,26 @@ function Dashboard({ user, userRole }) {
     let filtered = bhajans
 
     if (searchTerm) {
-      filtered = filtered.filter(b =>
-        b.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      const searchLower = searchTerm.toLowerCase().trim()
+      filtered = filtered.filter(b => {
+        // Search by bhajan name
+        const nameLower = (b.name || '').toLowerCase()
+        if (nameLower.includes(searchLower)) return true
+
+        // Search by first line of Malayalam lyrics
+        try {
+          const lyricsData = typeof b.lyrics === 'string' ? JSON.parse(b.lyrics) : b.lyrics || {}
+          const malayalamLyrics = (lyricsData.malayalam || '').trim()
+          if (malayalamLyrics) {
+            const firstLine = malayalamLyrics.split('\n')[0].toLowerCase()
+            if (firstLine.includes(searchLower)) return true
+          }
+        } catch (e) {
+          // Ignore parse errors
+        }
+
+        return false
+      })
     }
 
     if (filterTheme) {
