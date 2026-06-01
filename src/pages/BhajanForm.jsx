@@ -290,7 +290,9 @@ function BhajanForm() {
         const { error: updateError } = await supabase
           .from('bhajans')
           .update({
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
+            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -310,7 +312,9 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '), duration_minutes, year_of_recording,
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
+            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,

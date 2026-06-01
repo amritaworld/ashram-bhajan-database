@@ -35,7 +35,9 @@ function BulkImport({ user }) {
     const files = []
     const traverse = async (entry, path = '') => {
       if (entry.isFile) {
-        const file = await entry.file()
+        const file = await new Promise((resolve, reject) => {
+          entry.file(resolve, reject)
+        })
         if (file.name.toLowerCase().endsWith('.docx') && !file.name.startsWith('~$')) {
           file.webkitRelativePath = path ? `${path}/${file.name}` : file.name
           files.push(file)
