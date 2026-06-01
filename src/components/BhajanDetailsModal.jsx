@@ -3,12 +3,14 @@ import { supabase } from '../config/supabase'
 import ActivityLog from './ActivityLog'
 import AudioPlayer from './AudioPlayer'
 import Spinner from './Spinner'
+import { fetchTuneGroup } from '../utils/tuneGroups'
 import '../styles/BhajanDetailsModal.css'
 
 function BhajanDetailsModal({ bhajanId, onClose }) {
   const [bhajan, setBhajan] = useState(null)
   const [contributors, setContributors] = useState({ lyricists: [], composers: [], singers: [] })
   const [audioFiles, setAudioFiles] = useState([])
+  const [tuneGroup, setTuneGroup] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -28,11 +30,21 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
         setBhajan(data)
         await loadContributors(bhajanId)
         await loadAudioFiles(data.bhajan_id)
+        await loadTuneGroup(bhajanId)
       }
     } catch (err) {
       console.error('Error loading bhajan:', err)
     }
     setLoading(false)
+  }
+
+  const loadTuneGroup = async (bhajanId) => {
+    try {
+      const group = await fetchTuneGroup(bhajanId)
+      setTuneGroup(group)
+    } catch (err) {
+      console.error('Error loading tune group:', err)
+    }
   }
 
   const loadContributors = async (bhajanId) => {
@@ -180,6 +192,24 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
               </p>
             </div>
           </div>
+
+          {tuneGroup.length > 1 && (
+            <div className="tune-group-section">
+              <h3>🎵 Tune Group (Linked Versions)</h3>
+              <div className="tune-group-list">
+                {tuneGroup.map((b) => (
+                  <div key={b.id} className={`tune-group-item ${b.id === bhajanId ? 'current' : ''}`}>
+                    <span className="tune-group-indicator">
+                      {b.id === bhajan.original_bhajan_id ? '🔵' : b.original_bhajan_id ? '🔗' : '🔵'}
+                    </span>
+                    <span className="tune-group-name">{b.name}</span>
+                    <span className="tune-group-language">({b.language})</span>
+                    {b.id === bhajanId && <span className="tune-group-badge">current</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {(contributors.lyricists.length > 0 || contributors.composers.length > 0 || contributors.singers.length > 0) && (
             <div className="contributors-section">

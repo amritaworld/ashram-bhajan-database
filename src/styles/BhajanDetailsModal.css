@@ -185,6 +185,69 @@
   outline: 1px solid #2a2a30;
 }
 
+/* Tune Group Section */
+.tune-group-section {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(214, 168, 79, 0.05);
+  border: 1px solid rgba(214, 168, 79, 0.2);
+  border-radius: 0.75rem;
+}
+
+.tune-group-section h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #d6a84f;
+  font-size: 1rem;
+}
+
+.tune-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tune-group-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.tune-group-item.current {
+  background: rgba(214, 168, 79, 0.15);
+  border: 1px solid rgba(214, 168, 79, 0.3);
+}
+
+.tune-group-indicator {
+  font-size: 1.1rem;
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+.tune-group-name {
+  color: #e5e7eb;
+  font-weight: 500;
+  flex: 1;
+}
+
+.tune-group-language {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.tune-group-badge {
+  background: rgba(214, 168, 79, 0.3);
+  color: #d6a84f;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .modal-content {
     max-height: 100vh;
