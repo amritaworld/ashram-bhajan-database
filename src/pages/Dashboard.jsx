@@ -31,6 +31,7 @@ function Dashboard({ user, userRole }) {
   const [languages, setLanguages] = useState([])
   const [selectedBhajan, setSelectedBhajan] = useState(null)
   const [selectedLyrics, setSelectedLyrics] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
 
   useEffect(() => {
     loadBhajans()
@@ -50,6 +51,16 @@ function Dashboard({ user, userRole }) {
   useEffect(() => {
     filterBhajans()
   }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, bhajans])
+
+  // Keep selection in sync with what's visible — drop ids that filtered out
+  useEffect(() => {
+    setSelectedIds(prev => {
+      if (prev.size === 0) return prev
+      const visible = new Set(filteredBhajans.map(b => b.id))
+      const next = new Set([...prev].filter(id => visible.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [filteredBhajans])
 
   const loadBhajans = async () => {
     setLoading(true)
@@ -156,6 +167,38 @@ function Dashboard({ user, userRole }) {
       await loadBhajans()
       alert('Bhajan deleted')
     }
+  }
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const allFilteredSelected =
+    filteredBhajans.length > 0 && filteredBhajans.every(b => selectedIds.has(b.id))
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allFilteredSelected ? new Set() : new Set(filteredBhajans.map(b => b.id)))
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds]
+    if (ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} selected bhajan${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+
+    const { error } = await supabase.from('bhajans').delete().in('id', ids)
+    if (error) {
+      alert('Error deleting bhajans: ' + error.message)
+      return
+    }
+    setSelectedIds(new Set())
+    await loadBhajans()
+    await loadStats()
+    alert(`Deleted ${ids.length} bhajan${ids.length > 1 ? 's' : ''}`)
   }
 
   const totalPages = Math.max(1, Math.ceil(filteredBhajans.length / PAGE_SIZE))
@@ -290,6 +333,27 @@ function Dashboard({ user, userRole }) {
         {filteredBhajans.length !== bhajans.length ? ` (filtered from ${bhajans.length})` : ''}
       </div>
 
+      {!loading && filteredBhajans.length > 0 && (
+        <div className="bulk-actions-bar">
+          <label className="select-all-label">
+            <input
+              type="checkbox"
+              checked={allFilteredSelected}
+              onChange={toggleSelectAll}
+            />
+            Select all {filteredBhajans.length}
+          </label>
+          {selectedIds.size > 0 && (
+            <div className="bulk-actions-right">
+              <span className="selected-count">{selectedIds.size} selected</span>
+              <button className="btn-delete" onClick={handleBulkDelete}>
+                🗑 Delete Selected ({selectedIds.size})
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <Spinner label="Loading bhajans" />
       ) : filteredBhajans.length === 0 ? (
@@ -301,7 +365,14 @@ function Dashboard({ user, userRole }) {
       ) : (
         <div className="bhajans-list">
           {pageItems.map(bhajan => (
-            <div key={bhajan.id} className="bhajan-item">
+            <div key={bhajan.id} className={`bhajan-item${selectedIds.has(bhajan.id) ? ' selected' : ''}`}>
+              <input
+                type="checkbox"
+                className="bhajan-select"
+                checked={selectedIds.has(bhajan.id)}
+                onChange={() => toggleSelect(bhajan.id)}
+                aria-label={`Select ${bhajan.name}`}
+              />
               <div className="bhajan-info">
                 <h3>{bhajan.name}</h3>
                 <div className="bhajan-meta">

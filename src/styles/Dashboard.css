@@ -149,6 +149,7 @@
   border-radius: 1rem;
   padding: 1.5rem;
   display: flex;
+  gap: 1rem;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -159,6 +160,65 @@
   border-color: #d6a84f;
   box-shadow: 0 6px 16px rgba(214, 168, 79, 0.15);
   transform: translateY(-2px);
+}
+
+.bhajan-item.selected {
+  border-color: #d6a84f;
+  background: linear-gradient(135deg, #1a160e 0%, #211b10 100%);
+}
+
+.bhajan-item .bhajan-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.bhajan-select {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  accent-color: #d6a84f;
+  cursor: pointer;
+}
+
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 2rem 1rem;
+  padding: 0.75rem 1rem;
+  background: #111114;
+  border: 1px solid #2a2a30;
+  border-radius: 0.75rem;
+}
+
+.select-all-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #d6d6d6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.select-all-label input {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: #d6a84f;
+  cursor: pointer;
+}
+
+.bulk-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.selected-count {
+  color: #d6a84f;
+  font-weight: 600;
+  font-size: 0.875rem;
 }
 
 .bhajan-info h3 {
