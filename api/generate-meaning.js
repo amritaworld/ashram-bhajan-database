@@ -48,14 +48,41 @@ function send(res, status, obj) {
 }
 
 async function verifyUser(token) {
-  if (!token) return false
+  if (!token) return null
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_ANON },
     })
-    return r.ok
+    if (!r.ok) return null
+    return await r.json() // { email, ... }
   } catch {
-    return false
+    return null
+  }
+}
+
+// flash-lite rates ($/1M tokens) and a rough USD->INR factor for display.
+const IN_RATE = 0.1
+const OUT_RATE = 0.4
+const INR_PER_USD = 88
+function costINR(promptTok, outTok) {
+  return ((promptTok / 1e6) * IN_RATE + (outTok / 1e6) * OUT_RATE) * INR_PER_USD
+}
+
+// Best-effort usage log. Never blocks/breaks the main response.
+async function logUsage(token, row) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/api_usage`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_ANON,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(row),
+    })
+  } catch {
+    /* ignore logging failures */
   }
 }
 
@@ -68,7 +95,8 @@ export default async function handler(req, res) {
   // Auth: only logged-in users may spend API credits.
   const auth = req.headers['authorization'] || ''
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-  if (!(await verifyUser(token))) return send(res, 401, { error: 'Not authenticated' })
+  const user = await verifyUser(token)
+  if (!user) return send(res, 401, { error: 'Not authenticated' })
 
   let body
   try {
@@ -98,6 +126,10 @@ export default async function handler(req, res) {
     )
     if (!gr.ok) {
       const t = await gr.text()
+      await logUsage(token, {
+        user_email: user.email || null, feature: 'generate_meaning', model: MODEL,
+        prompt_tokens: 0, output_tokens: 0, cost_inr: 0, status: 'error',
+      })
       return send(res, 502, { error: `Gemini error ${gr.status}`, detail: t.slice(0, 300) })
     }
     const data = await gr.json()
@@ -109,6 +141,15 @@ export default async function handler(req, res) {
       const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, '').trim()
       parsed = JSON.parse(cleaned)
     }
+    // Record usage + cost (best-effort).
+    const u = data.usageMetadata || {}
+    const promptTok = u.promptTokenCount || 0
+    const outTok = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0)
+    await logUsage(token, {
+      user_email: user.email || null, feature: 'generate_meaning', model: MODEL,
+      prompt_tokens: promptTok, output_tokens: outTok,
+      cost_inr: Number(costINR(promptTok, outTok).toFixed(4)), status: 'ok',
+    })
     return send(res, 200, {
       malayalam_meaning: parsed.malayalam_meaning || '',
       english_meaning: parsed.english_meaning || '',

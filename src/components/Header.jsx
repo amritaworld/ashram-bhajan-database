@@ -72,12 +72,20 @@ function Header({ userRole }) {
             </>
           )}
           {userRole === 'admin' && (
-            <button
-              onClick={() => handleNavigation('/users')}
-              className={`nav-link ${isActive('/users') ? 'active' : ''}`}
-            >
-              Users
-            </button>
+            <>
+              <button
+                onClick={() => handleNavigation('/users')}
+                className={`nav-link ${isActive('/users') ? 'active' : ''}`}
+              >
+                Users
+              </button>
+              <button
+                onClick={() => handleNavigation('/api-usage')}
+                className={`nav-link ${isActive('/api-usage') ? 'active' : ''}`}
+              >
+                API Calls
+              </button>
+            </>
           )}
           <button
             onClick={handleLogout}

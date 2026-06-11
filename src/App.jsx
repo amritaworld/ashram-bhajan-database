@@ -10,6 +10,7 @@ import AudioConvert from './pages/AudioConvert'
 import { isLocalHost } from './utils/env'
 import UserManagement from './pages/UserManagement'
 import ThemeManagement from './pages/ThemeManagement'
+import ApiUsage from './pages/ApiUsage'
 import ContributorManagement from './pages/ContributorManagement'
 import Spinner from './components/Spinner'
 import './App.css'
@@ -58,6 +59,7 @@ function App() {
               <Route path="/audio-convert" element={(isLocalHost && (userRole === 'admin' || userRole === 'contributor')) ? <AudioConvert user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/themes" element={(userRole === 'admin' || userRole === 'contributor') ? <ThemeManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/users" element={userRole === 'admin' ? <UserManagement user={user} /> : <Navigate to="/dashboard" />} />
+              <Route path="/api-usage" element={userRole === 'admin' ? <ApiUsage /> : <Navigate to="/dashboard" />} />
               <Route path="/contributors" element={(userRole === 'admin' || userRole === 'contributor') ? <ContributorManagement user={user} /> : <Navigate to="/dashboard" />} />
               <Route path="/" element={<Navigate to="/dashboard" />} />
             </>
