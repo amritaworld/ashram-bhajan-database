@@ -71,6 +71,49 @@
 
 ---
 
+### Feature #3: Auto-Enrichment from LayamritamSongs ⏳ (In Progress)
+- One-time data load from LayamritamSongs.xlsx (3,163 reference songs)
+- Auto-populate theme, raga, tala, year when matching bhajans by name
+- Handles IAST format (Sanskrit diacriticals: ā, ī, ū, ñ, ṣ, etc.)
+- Fuzzy matching allows slight spelling differences (e.g., "Aadi Ba O Ranga" ≈ "Adiba O Ranga")
+- Works during bulk import AND single bhajan creation
+
+**Completed:**
+- ✅ Created IAST normalization utility (`src/utils/iast.js`)
+- ✅ Supabase table `layamritam_songs` created with 3,163 reference songs
+- ✅ Auto-enrichment logic integrated into BulkImport and BhajanForm
+- ✅ CSV properly encoded with UTF-8 (fixed BOM issue)
+- ✅ Removed `/enrich` menu and route (one-time load, not persistent UI)
+- ✅ Load script created: `scripts/load-layamritam.js`
+
+**Pending / Issues:**
+- ⚠️ Value mapping mismatch: CSV values need to map to actual DB values
+  - Theme: CSV "Kṛṣṇa" (normalized → "krishna") must match actual DB theme (e.g., "krsna (legacy)")
+  - Tala: CSV "Dādra-6/12" must match exact format in DB (spacing/punctuation)
+- ⚠️ Year field: Not populating in BhajanForm (form default value blocking enrichment)
+- 🔧 Need to test on real data and verify matching works
+
+**Files Created/Modified:**
+- ✅ NEW: `src/utils/iast.js` — IAST character normalization
+- ✅ MODIFIED: `src/utils/excelEnrich.js` — Supabase table queries (not file-based)
+- ✅ MODIFIED: `src/pages/BulkImport.jsx` — Auto-enrich each DOCX during import
+- ✅ MODIFIED: `src/pages/BhajanForm.jsx` — Auto-enrich when saving single bhajans
+- ✅ MODIFIED: `src/App.jsx` — Removed /enrich route
+- ✅ MODIFIED: `src/components/Header.jsx` — Removed Enrich menu link
+- ✅ NEW: `supabase/migrations/create_layamritam_songs_table.sql` — Table schema
+- ✅ NEW: `scripts/load-layamritam.js` — Data loading utility
+- ✅ NEW: `.env` — Supabase credentials (do not commit)
+
+**Next Session Resume:**
+1. Check themes table for exact theme names in DB (run `/themes` or `SELECT * FROM themes`)
+2. Check how talas are stored (example values from DB)
+3. Update enrichment logic to map CSV → DB values (add lookup/mapping)
+4. Fix year_of_recording default value issue in BhajanForm
+5. Test import and single bhajan creation
+6. Commit and push to GitHub
+
+---
+
 ## Pending Conversations / Ideas
 (Add notes from other sessions here)
 

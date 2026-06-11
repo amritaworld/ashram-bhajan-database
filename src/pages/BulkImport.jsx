@@ -2,10 +2,38 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import { parseDocx, generateBhajanId } from '../utils/parseDocx'
+import { enrichBhajan } from '../utils/excelEnrich'
+import { firstStanza, firstLineKey, stanzaSimilarity } from '../utils/iast'
 import Spinner from '../components/Spinner'
 import '../styles/BulkImport.css'
 
 const CHUNK_SIZE = 50
+
+// Dedup thresholds (full-first-stanza similarity, 0-100).
+// >= EXACT  → treat as an exact duplicate (auto-skippable).
+// [POSSIBLE, EXACT) with the same first line → "possible duplicate":
+//   first stanza matches but the song may diverge later — never auto-dropped,
+//   surfaced for manual review with a per-row opt-in.
+const DUP_EXACT = 92
+const DUP_POSSIBLE = 65
+
+// The stanza we key dedup on: English IAST pallavi (normalizeIAST absorbs
+// diacritic/spelling drift across songbooks), falling back to the Malayalam
+// pallavi when no IAST lyrics are present.
+function dedupStanza(lyricsEnglish, lyricsMalayalam) {
+  return firstStanza(lyricsEnglish) || firstStanza(lyricsMalayalam)
+}
+
+// Parse a stored bhajans.lyrics JSON string into { english, malayalam }.
+function parseStoredLyrics(raw) {
+  if (!raw) return { english: '', malayalam: '' }
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw
+    return { english: obj.english || '', malayalam: obj.malayalam || '' }
+  } catch {
+    return { english: '', malayalam: '' }
+  }
+}
 
 async function mapLimit(items, limit, fn, onTick) {
   const results = new Array(items.length)
@@ -31,6 +59,8 @@ function BulkImport({ user }) {
   const [summary, setSummary] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
+  // Row indices of "possible duplicates" the user has opted to import anyway.
+  const [includePossible, setIncludePossible] = useState(() => new Set())
 
   const collectDocxFiles = async (items) => {
     const files = []
@@ -127,14 +157,21 @@ function BulkImport({ user }) {
       (done) => setProgress((p) => ({ ...p, done }))
     )
 
-    const existingNames = new Set()
     const existingSlugs = new Set()
+    // Tier-1 bucket of existing DB bhajans: firstLineKey -> [{ name, stanza }]
+    const dbIndex = new Map()
     try {
-      const { data, error } = await supabase.from('bhajans').select('name, bhajan_id')
+      const { data, error } = await supabase.from('bhajans').select('name, bhajan_id, lyrics')
       if (error) throw error
       for (const b of data || []) {
-        if (b.name) existingNames.add(b.name.trim().toLowerCase())
         if (b.bhajan_id) existingSlugs.add(b.bhajan_id)
+        const { english, malayalam } = parseStoredLyrics(b.lyrics)
+        const stanza = dedupStanza(english, malayalam)
+        if (!stanza) continue
+        const key = firstLineKey(stanza)
+        if (!key) continue
+        if (!dbIndex.has(key)) dbIndex.set(key, [])
+        dbIndex.get(key).push({ name: b.name || '(untitled)', stanza })
       }
     } catch (err) {
       alert('Could not load existing bhajans: ' + err.message)
@@ -143,8 +180,7 @@ function BulkImport({ user }) {
     }
 
     const batchSlugs = new Set()
-    const seenTitles = new Set()
-    const built = parsed.map((p) => {
+    const built = await Promise.all(parsed.map(async (p) => {
       if (p.parseError) {
         return { ...p, status: 'error', messages: [p.parseError] }
       }
@@ -153,14 +189,6 @@ function BulkImport({ user }) {
       if (!title) {
         return { ...p, status: 'error', messages: ['No Title section found'] }
       }
-      const titleKey = title.toLowerCase()
-      if (existingNames.has(titleKey)) {
-        return { ...p, status: 'duplicate', messages: ['Already in database'] }
-      }
-      if (seenTitles.has(titleKey)) {
-        return { ...p, status: 'duplicate', messages: ['Duplicate within batch'] }
-      }
-      seenTitles.add(titleKey)
 
       const base = generateBhajanId(title) || 'bhajan'
       let slug = base
@@ -172,14 +200,79 @@ function BulkImport({ user }) {
       if (!p.data.lyrics_malayalam && !p.data.lyrics_english) messages.push('No lyrics')
       if (p.isReview) messages.push('From _REVIEW')
 
+      // Stanza used for duplicate detection (classified in the pass below)
+      const stanza = dedupStanza(p.data.lyrics_english, p.data.lyrics_malayalam)
+
+      // Auto-enrich from layamritam data
+      let enrichment = null
+      try {
+        const enriched = await enrichBhajan({ name: title })
+        if (enriched._enrichmentUsed) {
+          enrichment = {
+            theme: enriched.theme,
+            raga: enriched.raga,
+            tala: enriched.tala,
+            year: enriched.year,
+            reason: enriched._enrichmentConfidence >= 90 ? 'High confidence match' : 'Fuzzy match'
+          }
+          messages.push(`✨ Enriched (${enriched._enrichmentFields.join(', ')})`)
+        }
+      } catch (err) {
+        // Silently skip enrichment errors
+        console.warn('Enrichment failed for', title, err)
+      }
+
       return {
         ...p,
         title,
         slug,
+        stanza,
+        enrichment,
         status: messages.length ? 'warn' : 'ok',
         messages,
       }
-    })
+    }))
+
+    // Two-tier duplicate detection, run sequentially so within-batch order is
+    // deterministic. Tier 1: bucket by normalized first line. Tier 2: full
+    // first-stanza similarity. Checked against the existing DB AND earlier
+    // files in this batch. Borderline matches are flagged "possible" (never
+    // auto-dropped) — these are sacred texts that may share a pallavi but
+    // diverge later.
+    const batchIndex = new Map()
+    const register = (key, name, stanza) => {
+      if (!batchIndex.has(key)) batchIndex.set(key, [])
+      batchIndex.get(key).push({ name, stanza })
+    }
+    for (const r of built) {
+      if (r.status === 'error' || !r.stanza) continue
+      const key = firstLineKey(r.stanza)
+      if (!key) continue
+
+      const candidates = [
+        ...(dbIndex.get(key) || []).map((c) => ({ ...c, where: 'database' })),
+        ...(batchIndex.get(key) || []).map((c) => ({ ...c, where: 'this batch' })),
+      ]
+      let best = null
+      for (const c of candidates) {
+        const score = stanzaSimilarity(r.stanza, c.stanza)
+        if (!best || score > best.score) best = { ...c, score }
+      }
+
+      if (best && best.score >= DUP_EXACT) {
+        // Exact duplicate: keep the first occurrence, don't register this one.
+        r.status = 'duplicate'
+        r.dupMatch = best
+        r.messages = [`Duplicate of “${best.name}” in ${best.where} (${best.score}%)`, ...r.messages]
+      } else if (best && best.score >= DUP_POSSIBLE) {
+        r.status = 'possible'
+        r.dupMatch = best
+        r.messages = [`Possible duplicate of “${best.name}” in ${best.where} (${best.score}%)`, ...r.messages]
+        register(key, r.title, r.stanza) // still a distinct bhajan — later files can match it
+      } else {
+        register(key, r.title, r.stanza)
+      }
+    }
 
     setRows(built)
     setPhase('preview')
@@ -189,10 +282,20 @@ function BulkImport({ user }) {
     (acc, r) => ((acc[r.status] = (acc[r.status] || 0) + 1), acc),
     {}
   )
-  const importable = rows.filter((r) => {
-    if (skipDuplicates && r.status === 'duplicate') return false
-    return r.status === 'ok' || r.status === 'warn'
+  const importable = rows.filter((r, i) => {
+    if (r.status === 'ok' || r.status === 'warn') return true
+    if (r.status === 'duplicate') return !skipDuplicates
+    if (r.status === 'possible') return includePossible.has(i)
+    return false
   })
+
+  const togglePossible = (i) => {
+    setIncludePossible((prev) => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
 
   const buildRecord = (r) => ({
     bhajan_id: r.slug,
@@ -210,7 +313,17 @@ function BulkImport({ user }) {
     copyright_holder: 'Mata Amritanandamayi Math',
     copyright_status: 'pending',
     license_type: 'proprietary',
-    internal_notes: r.isReview ? 'Bulk import (flagged in _REVIEW)' : 'Bulk import',
+    theme: r.enrichment?.theme || null,
+    raga: r.enrichment?.raga || null,
+    tala: r.enrichment?.tala || null,
+    year: r.enrichment?.year || null,
+    internal_notes: [
+      r.isReview ? 'Bulk import (flagged in _REVIEW)' : 'Bulk import',
+      r.enrichment?.reason ? `Auto-enriched: ${r.enrichment.reason}` : null,
+      r.status === 'possible' && r.dupMatch
+        ? `⚠️ Possible duplicate of "${r.dupMatch.name}" (${r.dupMatch.score}%) — review`
+        : null,
+    ].filter(Boolean).join(' | '),
     created_by: user?.id || null,
   })
 
@@ -253,7 +366,8 @@ function BulkImport({ user }) {
     setSummary({
       ok,
       failed,
-      skipped: rows.filter((r) => r.status === 'duplicate'),
+      skipped: rows.filter((r) => r.status === 'duplicate' && skipDuplicates),
+      possibleSkipped: rows.filter((r, i) => r.status === 'possible' && !includePossible.has(i)),
       errored: rows.filter((r) => r.status === 'error'),
     })
     setPhase('done')
@@ -324,6 +438,7 @@ function BulkImport({ user }) {
             <div className="import-counts">
               <span className="count-chip ok">{counts.ok || 0} ready</span>
               <span className="count-chip warn">{counts.warn || 0} with warnings</span>
+              <span className="count-chip possible">{counts.possible || 0} possible dupes</span>
               <span className="count-chip dup">{counts.duplicate || 0} duplicates</span>
               <span className="count-chip err">{counts.error || 0} errors</span>
             </div>
@@ -335,8 +450,15 @@ function BulkImport({ user }) {
                   checked={skipDuplicates}
                   onChange={(e) => setSkipDuplicates(e.target.checked)}
                 />
-                Skip duplicates automatically
+                Skip exact duplicates automatically
               </label>
+              {(counts.possible || 0) > 0 && (
+                <p className="import-options-hint">
+                  🟡 <strong>{counts.possible} possible duplicate{counts.possible === 1 ? '' : 's'}</strong> —
+                  the first stanza matches an existing bhajan but the rest may differ. These are
+                  left out by default; tick “import anyway” on a row to include it as a flagged draft.
+                </p>
+              )}
             </div>
 
             <div className="import-table-wrap">
@@ -359,7 +481,19 @@ function BulkImport({ user }) {
                       <td className="row-date">{r.fileDate}</td>
                       <td>{r.title || <em>—</em>}</td>
                       <td>{r.data?.language || <em>—</em>}</td>
-                      <td className="row-notes">{r.messages.join(', ')}</td>
+                      <td className="row-notes">
+                        {r.messages.join(', ')}
+                        {r.status === 'possible' && (
+                          <label className="import-anyway">
+                            <input
+                              type="checkbox"
+                              checked={includePossible.has(i)}
+                              onChange={() => togglePossible(i)}
+                            />
+                            import anyway
+                          </label>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -391,6 +525,11 @@ function BulkImport({ user }) {
             <div className="import-counts">
               <span className="count-chip ok">{summary.ok.length} imported</span>
               <span className="count-chip dup">{summary.skipped.length} skipped (duplicate)</span>
+              {summary.possibleSkipped.length > 0 && (
+                <span className="count-chip possible">
+                  {summary.possibleSkipped.length} possible dupes left out
+                </span>
+              )}
               <span className="count-chip err">
                 {summary.failed.length + summary.errored.length} not imported
               </span>
@@ -436,6 +575,7 @@ function BulkImport({ user }) {
 function statusIcon(status) {
   if (status === 'ok') return '✅'
   if (status === 'warn') return '⚠️'
+  if (status === 'possible') return '🟡'
   if (status === 'duplicate') return '⏭️'
   return '❌'
 }

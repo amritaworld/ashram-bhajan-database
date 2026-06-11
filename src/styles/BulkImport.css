@@ -119,6 +119,17 @@
   height: 18px;
 }
 
+.import-options-hint {
+  margin: 0.6rem 0 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #cbb27a;
+}
+
+.import-options-hint strong {
+  color: #f0d9a3;
+}
+
 /* Count chips */
 .import-counts {
   display: flex;
@@ -146,6 +157,12 @@
   background: rgba(214, 168, 79, 0.12);
   color: #e8c987;
   border-color: rgba(214, 168, 79, 0.4);
+}
+
+.count-chip.possible {
+  background: rgba(250, 204, 21, 0.12);
+  color: #fde047;
+  border-color: rgba(250, 204, 21, 0.4);
 }
 
 .count-chip.dup {
@@ -231,6 +248,27 @@
 .row-duplicate .row-file,
 .row-duplicate td {
   color: #94a3b8;
+}
+
+.row-possible {
+  background: rgba(250, 204, 21, 0.04);
+}
+
+.import-anyway {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #fde047;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.import-anyway input[type="checkbox"] {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
 }
 
 .import-table em {
