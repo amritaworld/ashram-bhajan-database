@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
+import { enrichBhajan } from '../utils/excelEnrich'
 import AudioPlayer from '../components/AudioPlayer'
 import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
 import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
+import { malayalamToIAST } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
@@ -23,8 +25,12 @@ function BhajanForm() {
   const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
   const [lyrics_malayalam, setLyricsMalayalam] = useState('')
   const [lyrics_english, setLyricsEnglish] = useState('')
+  // When true, the English (IAST) field was hand-edited/loaded, so we don't
+  // auto-overwrite it as Malayalam changes. The "Sync" button resets this.
+  const [englishManual, setEnglishManual] = useState(false)
   const [meaning_malayalam, setMeaningMalayalam] = useState('')
   const [meaning_english, setMeaningEnglish] = useState('')
+  const [generatingMeaning, setGeneratingMeaning] = useState(false)
   const [status, setStatus] = useState('draft')
   const [copyrightHolder, setCopyrightHolder] = useState('Mata Amritanandamayi Math')
   const [copyrightStatus, setCopyrightStatus] = useState('pending')
@@ -159,6 +165,8 @@ function BhajanForm() {
         const meaningData = typeof data.meaning === 'string' ? JSON.parse(data.meaning) : data.meaning || {}
         setLyricsMalayalam(lyricsData.malayalam || '')
         setLyricsEnglish(lyricsData.english || '')
+        // Preserve any existing English (IAST) — don't auto-overwrite it.
+        setEnglishManual(!!(lyricsData.english || '').trim())
         setMeaningMalayalam(meaningData.malayalam || '')
         setMeaningEnglish(meaningData.english || '')
       } catch (e) {
@@ -276,6 +284,38 @@ function BhajanForm() {
     }
   }
 
+  const regenerateMeanings = async () => {
+    if (!lyrics_malayalam.trim()) {
+      alert('Add Malayalam lyrics first — the meaning is generated from them.')
+      return
+    }
+    if ((meaning_malayalam.trim() || meaning_english.trim()) &&
+        !window.confirm('This will replace the current Malayalam and English meanings with AI-generated ones. Continue?')) {
+      return
+    }
+    setGeneratingMeaning(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { alert('Please log in again.'); return }
+      const res = await fetch('/api/generate-meaning', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ lyrics: lyrics_malayalam, language: language || 'Malayalam' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
+      setMeaningMalayalam(data.malayalam_meaning || '')
+      setMeaningEnglish(data.english_meaning || '')
+    } catch (err) {
+      alert('Could not generate meaning: ' + err.message)
+    } finally {
+      setGeneratingMeaning(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!name) {
       alert('Enter bhajan name')
@@ -288,15 +328,34 @@ function BhajanForm() {
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
       const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
 
+      // Auto-enrich from layamritam data if fields are empty
+      let enrichedTheme = theme
+      let enrichedRaga = ragas
+      let enrichedTala = talas
+      let enrichedYear = year_of_recording
+      try {
+        const enriched = await enrichBhajan({ name })
+        if (enriched._enrichmentUsed) {
+          if (!theme && enriched.theme) enrichedTheme = enriched.theme
+          if (!ragas.length && enriched.raga) enrichedRaga = enriched.raga.split(',').map(s => s.trim())
+          if (!talas.length && enriched.tala) enrichedTala = enriched.tala.split(',').map(s => s.trim())
+          if (!year_of_recording && enriched.year) enrichedYear = enriched.year
+          // Show info about enrichment
+          console.log('Auto-enriched:', enriched._enrichmentFields)
+        }
+      } catch (err) {
+        console.warn('Enrichment failed:', err)
+      }
+
       let savedId = id
 
       if (id) {
         const { error: updateError } = await supabase
           .from('bhajans')
           .update({
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            name, theme: enrichedTheme, language, raga: enrichedRaga.join(', '), tala: enrichedTala.join(', '),
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
-            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
+            year_of_recording: enrichedYear ? parseInt(enrichedYear) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -317,9 +376,9 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            name, theme: enrichedTheme, language, raga: enrichedRaga.join(', '), tala: enrichedTala.join(', '),
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
-            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
+            year_of_recording: enrichedYear ? parseInt(enrichedYear) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -452,15 +511,57 @@ function BhajanForm() {
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyrics</h2>
         <div className="form-group">
           <label>Malayalam</label>
-          <textarea value={lyrics_malayalam} onChange={(e) => setLyricsMalayalam(e.target.value)} rows="9" placeholder="Malayalam lyrics" />
+          <textarea
+            value={lyrics_malayalam}
+            onChange={(e) => {
+              const mal = e.target.value
+              setLyricsMalayalam(mal)
+              // Auto-fill the English (IAST) field until it's hand-edited.
+              if (!englishManual) setLyricsEnglish(malayalamToIAST(mal))
+            }}
+            rows="9"
+            placeholder="Malayalam lyrics"
+          />
         </div>
 
         <div className="form-group">
-          <label>English</label>
-          <textarea value={lyrics_english} onChange={(e) => setLyricsEnglish(e.target.value)} rows="9" placeholder="English lyrics" />
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>English (IAST)</span>
+            <button
+              type="button"
+              onClick={() => { setLyricsEnglish(malayalamToIAST(lyrics_malayalam)); setEnglishManual(false) }}
+              title="Regenerate the English (IAST) transliteration from the Malayalam lyrics"
+              style={{ fontSize: '0.78rem', fontWeight: 500, padding: '0.2rem 0.6rem', cursor: 'pointer',
+                       border: '1px solid #c08a2b', borderRadius: '6px', background: 'transparent', color: '#c08a2b' }}
+            >
+              ⟳ Sync from Malayalam
+            </button>
+          </label>
+          <textarea
+            value={lyrics_english}
+            onChange={(e) => { setLyricsEnglish(e.target.value); setEnglishManual(true) }}
+            rows="9"
+            placeholder="Auto-filled from Malayalam (IAST) — edit to override"
+          />
+          {englishManual && lyrics_malayalam.trim() && (
+            <small style={{ color: '#888' }}>Manual edit — auto-sync paused. Use “Sync from Malayalam” to regenerate.</small>
+          )}
         </div>
 
-        <h2 style={{ marginBottom: '1rem' }}>Meaning & Translation</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0 }}>Meaning & Translation</h2>
+          <button
+            type="button"
+            onClick={regenerateMeanings}
+            disabled={generatingMeaning}
+            title="Generate the Malayalam and English meanings from the Malayalam lyrics using AI"
+            style={{ fontSize: '0.82rem', fontWeight: 500, padding: '0.4rem 0.8rem',
+                     cursor: generatingMeaning ? 'wait' : 'pointer', border: '1px solid #c08a2b',
+                     borderRadius: '6px', background: generatingMeaning ? '#f5edd9' : 'transparent', color: '#c08a2b' }}
+          >
+            {generatingMeaning ? '✨ Generating…' : '✨ Generate meanings from lyrics'}
+          </button>
+        </div>
         <div className="form-group">
           <label>Malayalam</label>
           <textarea value={meaning_malayalam} onChange={(e) => setMeaningMalayalam(e.target.value)} rows="4" placeholder="Malayalam meaning" />
