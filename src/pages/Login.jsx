@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 
 function Login() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -14,12 +14,27 @@ function Login() {
     setError('')
     setLoading(true)
 
-    const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-
-    if (loginError) {
-      setError(loginError.message)
-    } else {
-      navigate('/dashboard')
+    try {
+      // Username login goes through a secure server endpoint that resolves the
+      // username to its email, then returns session tokens the browser adopts.
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const out = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(out.error || 'Login failed')
+      } else {
+        const { error: sessErr } = await supabase.auth.setSession({
+          access_token: out.access_token,
+          refresh_token: out.refresh_token,
+        })
+        if (sessErr) setError(sessErr.message)
+        else navigate('/dashboard')
+      }
+    } catch {
+      setError('Login failed, please try again')
     }
     setLoading(false)
   }
@@ -32,11 +47,14 @@ function Login() {
           {error && <div style={{ color: '#ff5c5c', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
 
           <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             disabled={loading}
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="username"
             required
           />
           <input

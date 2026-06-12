@@ -16,9 +16,11 @@ function UserManagement({ user }) {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     display_name: '',
-    role: 'viewer'
+    role: 'viewer',
+    newPassword: ''
   })
   const [editingId, setEditingId] = useState(null)
 
@@ -50,9 +52,11 @@ function UserManagement({ user }) {
   const resetForm = () => {
     setFormData({
       email: '',
+      username: '',
       password: '',
       display_name: '',
-      role: 'viewer'
+      role: 'viewer',
+      newPassword: ''
     })
     setEditingId(null)
     setShowForm(false)
@@ -66,17 +70,57 @@ function UserManagement({ user }) {
       return
     }
 
+    // Username is required (it's what people log in with) and must be unique.
+    const username = (formData.username || '').trim().toLowerCase()
+    if (!username) {
+      alert('Please enter a username (this is what the user logs in with)')
+      return
+    }
+    if (!/^[a-z0-9._-]{3,}$/.test(username)) {
+      alert('Username must be at least 3 characters: only letters, numbers, dot, underscore or hyphen')
+      return
+    }
+    const taken = users.find(u => (u.username || '').toLowerCase() === username && u.id !== editingId)
+    if (taken) {
+      alert(`The username "${username}" is already taken`)
+      return
+    }
+
     setLoading(true)
     try {
       if (editingId) {
         await supabase
           .from('users')
           .update({
+            username,
             display_name: formData.display_name,
             role: formData.role
           })
           .eq('id', editingId)
-        alert('User updated successfully!')
+
+        // Optional: reset this user's password (admin sets it directly via the
+        // secure server endpoint, which uses the service_role key).
+        if (formData.newPassword) {
+          if (formData.newPassword.length < 6) {
+            alert('New password must be at least 6 characters')
+            setLoading(false)
+            return
+          }
+          const { data: { session } } = await supabase.auth.getSession()
+          const res = await fetch('/api/admin-reset-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session?.access_token}`
+            },
+            body: JSON.stringify({ userId: editingId, newPassword: formData.newPassword })
+          })
+          const out = await res.json().catch(() => ({}))
+          if (!res.ok) throw new Error(out.error || 'Password reset failed')
+          alert('User updated and password reset. Tell the user their new password — they are not emailed.')
+        } else {
+          alert('User updated successfully!')
+        }
       } else {
         if (!formData.password) {
           alert('Please enter password for new user')
@@ -98,6 +142,7 @@ function UserManagement({ user }) {
           .insert([{
             id: newUserId,
             email: formData.email,
+            username,
             display_name: formData.display_name,
             role: formData.role
           }])
@@ -118,9 +163,11 @@ function UserManagement({ user }) {
   const handleEditUser = (userData) => {
     setFormData({
       email: userData.email,
+      username: userData.username || '',
       password: '',
       display_name: userData.display_name || '',
-      role: userData.role
+      role: userData.role,
+      newPassword: ''
     })
     setEditingId(userData.id)
     setShowForm(true)
@@ -172,6 +219,23 @@ function UserManagement({ user }) {
               />
             </div>
 
+            <div className="form-group">
+              <label>Username *</label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                placeholder="e.g. hari"
+                autoCapitalize="none"
+                autoCorrect="off"
+                required
+              />
+              <small style={{ color: '#9ca3af', display: 'block', marginTop: '0.4rem' }}>
+                This is what the user types to log in. Letters, numbers, dot, underscore or hyphen.
+              </small>
+            </div>
+
             {!editingId && (
               <div className="form-group">
                 <label>Password *</label>
@@ -210,6 +274,24 @@ function UserManagement({ user }) {
               </select>
             </div>
 
+            {editingId && (
+              <div className="form-group">
+                <label>Reset Password (optional)</label>
+                <input
+                  type="password"
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleInputChange}
+                  placeholder="Type a new password to reset it"
+                  autoComplete="new-password"
+                />
+                <small style={{ color: '#9ca3af', display: 'block', marginTop: '0.4rem' }}>
+                  Leave blank to keep the current password. The user is <strong>not</strong> emailed —
+                  tell them the new password yourself.
+                </small>
+              </div>
+            )}
+
             <div className="form-actions">
               <button type="submit" disabled={loading} className="btn-primary">
                 {loading ? 'Saving...' : editingId ? 'Update User' : 'Create User'}
@@ -235,6 +317,7 @@ function UserManagement({ user }) {
           <table>
             <thead>
               <tr>
+                <th>Username</th>
                 <th>Email</th>
                 <th>Display Name</th>
                 <th>Role</th>
@@ -245,6 +328,7 @@ function UserManagement({ user }) {
             <tbody>
               {users.map(u => (
                 <tr key={u.id}>
+                  <td><strong>{u.username || '-'}</strong></td>
                   <td>{u.email}</td>
                   <td>{u.display_name || '-'}</td>
                   <td>
