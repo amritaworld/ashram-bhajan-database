@@ -32,6 +32,28 @@
   margin-bottom: 0.5rem;
 }
 
+.field-hint {
+  color: #9ca3af;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+/* Section header for grouped fields (Raga, Tala) — a tier below the main
+   <h2> sections, sitting clearly above the Carnatic/Hindustani sub-fields. */
+.field-group-label {
+  color: #d6a84f;
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #2a2a30;
+}
+
+.field-group-label .field-hint {
+  margin-left: 0.35rem;
+}
+
 .form-group input,
 .form-group textarea,
 .form-group select {

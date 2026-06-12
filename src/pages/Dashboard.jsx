@@ -6,6 +6,14 @@ import LyricsModal from '../components/LyricsModal'
 import Spinner from '../components/Spinner'
 import '../styles/Dashboard.css'
 
+// Listing rule: show Carnatic; if Carnatic is empty, show Hindustani; then the
+// legacy single field as a last fallback. Returns a comma-separated string.
+const displayRaga = (b) => b.raga_carnatic || b.raga_hindustani || b.raga || ''
+const displayTala = (b) => b.tala_carnatic || b.tala_hindustani || b.tala || ''
+const toList = (s) => (s || '').split(',').map((x) => x.trim()).filter(Boolean)
+// Every raga a bhajan has across systems — used for the filter dropdown/match.
+const allRagas = (b) => toList([b.raga_carnatic, b.raga_hindustani, b.raga].join(','))
+
 function Dashboard({ user, userRole }) {
   const navigate = useNavigate()
   const [bhajans, setBhajans] = useState([])
@@ -95,7 +103,7 @@ function Dashboard({ user, userRole }) {
       const uniqueThemes = [...new Set(bhajanData?.map(b => b.theme).filter(t => t))]
       setThemes(uniqueThemes)
 
-      const uniqueRagas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
+      const uniqueRagas = [...new Set((bhajanData || []).flatMap(allRagas))].sort()
       setRagas(uniqueRagas)
 
       const uniqueLanguages = [...new Set((bhajanData || []).map(b => b.language).filter(Boolean))].sort()
@@ -136,9 +144,7 @@ function Dashboard({ user, userRole }) {
     }
 
     if (filterRaga) {
-      filtered = filtered.filter(b =>
-        (b.raga || '').split(',').map(s => s.trim()).includes(filterRaga)
-      )
+      filtered = filtered.filter(b => allRagas(b).includes(filterRaga))
     }
 
     if (filterLanguage) {
@@ -389,11 +395,11 @@ function Dashboard({ user, userRole }) {
                     </span>
                   )}
                   {bhajan.language && <span className="meta-badge">{bhajan.language}</span>}
-                  {(bhajan.raga || '').split(',').map(s => s.trim()).filter(Boolean).map(r => (
+                  {toList(displayRaga(bhajan)).map(r => (
                     <span key={r} className="meta-badge">{r}</span>
                   ))}
-                  {(bhajan.tala || '').split(',').map(s => s.trim()).filter(Boolean).map(t => (
-                    <span key={t} className="meta-badge">{t}</span>
+                  {toList(displayTala(bhajan)).map(t => (
+                    <span key={`tala-${t}`} className="meta-badge">{t}</span>
                   ))}
                   <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
                     {bhajan.copyright_status === 'approved' ? 'COPYRIGHTED' : 'PENDING'}

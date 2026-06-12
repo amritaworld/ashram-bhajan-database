@@ -6,6 +6,16 @@ import Spinner from './Spinner'
 import { fetchTuneGroup } from '../utils/tuneGroups'
 import '../styles/BhajanDetailsModal.css'
 
+// Show both systems when present (e.g. "Carnatic: Mohanam · Hindustani: Bhupali"),
+// falling back to whichever exists, then the legacy single field, then "-".
+function systemsText(carnatic, hindustani, legacy) {
+  const parts = []
+  if (carnatic) parts.push(`Carnatic: ${carnatic}`)
+  if (hindustani) parts.push(`Hindustani: ${hindustani}`)
+  if (parts.length) return parts.join('  ·  ')
+  return legacy || '-'
+}
+
 function BhajanDetailsModal({ bhajanId, onClose }) {
   const [bhajan, setBhajan] = useState(null)
   const [contributors, setContributors] = useState({ lyricists: [], composers: [], singers: [] })
@@ -171,11 +181,11 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
             </div>
             <div className="detail-item">
               <label>Raga</label>
-              <p>{bhajan.raga || '-'}</p>
+              <p>{systemsText(bhajan.raga_carnatic, bhajan.raga_hindustani, bhajan.raga)}</p>
             </div>
             <div className="detail-item">
               <label>Tala</label>
-              <p>{bhajan.tala || '-'}</p>
+              <p>{systemsText(bhajan.tala_carnatic, bhajan.tala_hindustani, bhajan.tala)}</p>
             </div>
             <div className="detail-item">
               <label>Duration</label>
@@ -192,6 +202,13 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
               </p>
             </div>
           </div>
+
+          {bhajan.notes && (
+            <div className="notes-section">
+              <h3>📝 Notes</h3>
+              <p className="notes-text">{bhajan.notes}</p>
+            </div>
+          )}
 
           {tuneGroup.length > 1 && (
             <div className="tune-group-section">

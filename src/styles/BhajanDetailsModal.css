@@ -186,6 +186,28 @@
 }
 
 /* Tune Group Section */
+.notes-section {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(214, 168, 79, 0.05);
+  border: 1px solid rgba(214, 168, 79, 0.2);
+  border-radius: 0.75rem;
+}
+
+.notes-section h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #d6a84f;
+  font-size: 1rem;
+}
+
+.notes-text {
+  margin: 0;
+  color: #e5e7eb;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .tune-group-section {
   margin-top: 2rem;
   padding: 1rem;

@@ -18,8 +18,11 @@ function BhajanForm() {
   const [theme, setTheme] = useState('')
   const [language, setLanguage] = useState('')
   const [originalBhajanId, setOriginalBhajanId] = useState('')
-  const [ragas, setRagas] = useState([])
-  const [talas, setTalas] = useState([])
+  const [ragasCarnatic, setRagasCarnatic] = useState([])
+  const [ragasHindustani, setRagasHindustani] = useState([])
+  const [talasCarnatic, setTalasCarnatic] = useState([])
+  const [talasHindustani, setTalasHindustani] = useState([])
+  const [notes, setNotes] = useState('')
   const [duration_minutes, setDuration] = useState('')
   const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
   const [lyrics_malayalam, setLyricsMalayalam] = useState('')
@@ -47,8 +50,10 @@ function BhajanForm() {
   const [contributors, setContributors] = useState([])
   const [suggestions, setSuggestions] = useState({
     themes: [],
-    ragas: [],
-    talas: [],
+    ragasCarnatic: [],
+    ragasHindustani: [],
+    talasCarnatic: [],
+    talasHindustani: [],
     languages: [],
     lyricists: [],
     composers: [],
@@ -99,7 +104,7 @@ function BhajanForm() {
     try {
       const { data: bhajanData } = await supabase
         .from('bhajans')
-        .select('theme, raga, tala')
+        .select('theme, raga, tala, raga_carnatic, raga_hindustani, tala_carnatic, tala_hindustani')
 
       const { data: writerData } = await supabase
         .from('bhajan_writers')
@@ -109,9 +114,19 @@ function BhajanForm() {
         .from('bhajan_singers')
         .select('singer_name')
 
+      // Build raga/tala suggestion pools from every system (Carnatic, Hindustani,
+      // and the legacy single field) so autocomplete covers all entries.
+      const splitAll = (rows, cols) =>
+        [...new Set(rows.flatMap(b => cols.flatMap(c => (b[c] || '').split(',').map(s => s.trim()))).filter(Boolean))].sort()
+
+      // Separate suggestion pools per system — Carnatic and Hindustani raga/tala
+      // names differ, so each box only suggests from its own column. The legacy
+      // single field is folded into the matching system (raga→Carnatic, tala→Hindustani).
       const themes = [...new Set(bhajanData?.map(b => b.theme).filter(Boolean))].sort()
-      const ragas = [...new Set((bhajanData || []).flatMap(b => (b.raga || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
-      const talas = [...new Set((bhajanData || []).flatMap(b => (b.tala || '').split(',').map(s => s.trim())).filter(Boolean))].sort()
+      const ragasCarnatic = splitAll(bhajanData || [], ['raga_carnatic', 'raga'])
+      const ragasHindustani = splitAll(bhajanData || [], ['raga_hindustani'])
+      const talasCarnatic = splitAll(bhajanData || [], ['tala_carnatic'])
+      const talasHindustani = splitAll(bhajanData || [], ['tala_hindustani', 'tala'])
       const languages = [...COMMON_LANGUAGES].sort()
 
       const lyricists = [...new Set(writerData?.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name).filter(Boolean))].sort()
@@ -120,8 +135,10 @@ function BhajanForm() {
 
       setSuggestions({
         themes,
-        ragas,
-        talas,
+        ragasCarnatic,
+        ragasHindustani,
+        talasCarnatic,
+        talasHindustani,
         languages,
         lyricists,
         composers,
@@ -154,8 +171,14 @@ function BhajanForm() {
       setTheme(data.theme || '')
       setLanguage(data.language || '')
       setOriginalBhajanId(data.original_bhajan_id || '')
-      setRagas(data.raga ? data.raga.split(',').map(s => s.trim()).filter(Boolean) : [])
-      setTalas(data.tala ? data.tala.split(',').map(s => s.trim()).filter(Boolean) : [])
+      // Split comma lists into tags. Fallback for un-migrated rows: existing
+      // single-field raga is Carnatic, single-field tala is Hindustani.
+      const toTags = (s) => (s ? s.split(',').map(t => t.trim()).filter(Boolean) : [])
+      setRagasCarnatic(toTags(data.raga_carnatic || data.raga))
+      setRagasHindustani(toTags(data.raga_hindustani))
+      setTalasCarnatic(toTags(data.tala_carnatic))
+      setTalasHindustani(toTags(data.tala_hindustani || data.tala))
+      setNotes(data.notes || '')
       setDuration(data.duration_minutes || '')
       setYearOfRecording(data.year_of_recording || new Date().getFullYear())
 
@@ -327,13 +350,31 @@ function BhajanForm() {
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
       const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
 
+      // Raga/Tala split by system (Carnatic / Hindustani), each a comma list
+      // to allow ragamalika (more than one raga). The legacy single `raga`/`tala`
+      // columns are mirrored to the display value (Carnatic, else Hindustani) so
+      // any view still reading them stays correct.
+      const ragaCarnaticStr = ragasCarnatic.join(', ')
+      const ragaHindustaniStr = ragasHindustani.join(', ')
+      const talaCarnaticStr = talasCarnatic.join(', ')
+      const talaHindustaniStr = talasHindustani.join(', ')
+      const ragaTalaFields = {
+        raga_carnatic: ragaCarnaticStr,
+        raga_hindustani: ragaHindustaniStr,
+        tala_carnatic: talaCarnaticStr,
+        tala_hindustani: talaHindustaniStr,
+        notes,
+        raga: ragaCarnaticStr || ragaHindustaniStr,
+        tala: talaCarnaticStr || talaHindustaniStr,
+      }
+
       let savedId = id
 
       if (id) {
         const { error: updateError } = await supabase
           .from('bhajans')
           .update({
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            name, theme, language, ...ragaTalaFields,
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
             year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
@@ -356,7 +397,7 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
+            name, theme, language, ...ragaTalaFields,
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
             year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
@@ -431,22 +472,50 @@ function BhajanForm() {
               )}
             </select>
           </div>
+        </div>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>
+          Raga <span className="field-hint">(add more than one for ragamalika)</span>
+        </h2>
+        <div className="form-row">
           <div className="form-group">
-            <label>Raga(s)</label>
+            <label>Carnatic</label>
             <TagInput
-              value={ragas}
-              options={suggestions.ragas}
-              onChange={setRagas}
-              placeholder="Search or add raga(s)..."
+              value={ragasCarnatic}
+              options={suggestions.ragasCarnatic}
+              onChange={setRagasCarnatic}
+              placeholder="Carnatic raga(s)..."
             />
           </div>
           <div className="form-group">
-            <label>Tala(s)</label>
+            <label>Hindustani</label>
             <TagInput
-              value={talas}
-              options={suggestions.talas}
-              onChange={setTalas}
-              placeholder="Search or add tala(s)..."
+              value={ragasHindustani}
+              options={suggestions.ragasHindustani}
+              onChange={setRagasHindustani}
+              placeholder="Hindustani raga(s)..."
+            />
+          </div>
+        </div>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Tala</h2>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Carnatic</label>
+            <TagInput
+              value={talasCarnatic}
+              options={suggestions.talasCarnatic}
+              onChange={setTalasCarnatic}
+              placeholder="Carnatic tala(s)..."
+            />
+          </div>
+          <div className="form-group">
+            <label>Hindustani</label>
+            <TagInput
+              value={talasHindustani}
+              options={suggestions.talasHindustani}
+              onChange={setTalasHindustani}
+              placeholder="Hindustani tala(s)..."
             />
           </div>
         </div>
@@ -486,6 +555,17 @@ function BhajanForm() {
               <option value="archived">Archived</option>
             </select>
           </div>
+        </div>
+
+        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Notes</h2>
+        <div className="form-group">
+          <label>Special notes / memories</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows="4"
+            placeholder="Any special notes or memories about this bhajan..."
+          />
         </div>
 
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyrics</h2>
