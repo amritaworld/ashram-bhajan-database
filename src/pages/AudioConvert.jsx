@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../config/supabase'
 import Spinner from '../components/Spinner'
+import { convertToMp3Wasm } from '../utils/wasmAudio'
 import '../styles/AudioConvert.css'
 
 const SERVER = 'http://localhost:5180'
-const CONCURRENCY = 3
+// Local helper server can run several at once; the in-browser engine is a
+// single wasm instance, so it converts one file at a time.
+const CONCURRENCY = { local: 3, browser: 1 }
 const AUDIO_EXT = /\.(wma|wav|mp3|m4a|aac|flac|ogg|oga|opus|aiff|aif|alac|wmv|amr)$/i
 
 function formatBytes(n) {
@@ -22,6 +25,7 @@ let rowSeq = 0
 
 function AudioConvert({ user }) {
   const [serverUp, setServerUp] = useState(null) // null=checking, true/false
+  const [engine, setEngine] = useState('browser') // 'local' | 'browser'
   const [bitrate, setBitrate] = useState('128')
   const [rows, setRows] = useState([])
   const [isDragging, setIsDragging] = useState(false)
@@ -33,12 +37,16 @@ function AudioConvert({ user }) {
   const queueRef = useRef([])       // rows waiting to convert
   const bitrateRef = useRef(bitrate)
   bitrateRef.current = bitrate
+  const engineRef = useRef(engine)
+  engineRef.current = engine
 
   const checkServer = useCallback(async () => {
     try {
       const r = await fetch(`${SERVER}/health`)
       const d = await r.json()
-      setServerUp(!!d.ok)
+      const up = !!d.ok
+      setServerUp(up)
+      if (up) setEngine('local') // prefer the fast local server when available
     } catch {
       setServerUp(false)
     }
@@ -83,16 +91,22 @@ function AudioConvert({ user }) {
   const convertRow = async (row) => {
     patch(row.id, { status: 'converting', error: null })
     try {
-      const res = await fetch(
-        `${SERVER}/convert?name=${encodeURIComponent(row.name)}&bitrate=${bitrateRef.current}`,
-        { method: 'POST', body: row.file }
-      )
-      if (!res.ok) {
-        let msg = `Server error (${res.status})`
-        try { msg = (await res.json()).error || msg } catch { /* not json */ }
-        throw new Error(msg)
+      let blob
+      if (engineRef.current === 'browser') {
+        // In-browser conversion (works on the live site, no helper server).
+        blob = await convertToMp3Wasm(row.file, bitrateRef.current)
+      } else {
+        const res = await fetch(
+          `${SERVER}/convert?name=${encodeURIComponent(row.name)}&bitrate=${bitrateRef.current}`,
+          { method: 'POST', body: row.file }
+        )
+        if (!res.ok) {
+          let msg = `Server error (${res.status})`
+          try { msg = (await res.json()).error || msg } catch { /* not json */ }
+          throw new Error(msg)
+        }
+        blob = await res.blob()
       }
-      const blob = await res.blob()
       patch(row.id, { status: 'done', mp3: blob, convSize: blob.size })
     } catch (err) {
       patch(row.id, { status: 'error', error: err.message })
@@ -101,7 +115,7 @@ function AudioConvert({ user }) {
 
   // Drain the queue, at most CONCURRENCY conversions at once. Safe to call any time.
   const pump = () => {
-    while (activeRef.current < CONCURRENCY && queueRef.current.length) {
+    while (activeRef.current < (CONCURRENCY[engineRef.current] || 1) && queueRef.current.length) {
       const row = queueRef.current.shift()
       activeRef.current++
       setRunning(true)
@@ -181,25 +195,24 @@ function AudioConvert({ user }) {
           Standardize audio (WMA, WAV, M4A, FLAC, high-bitrate MP3, …) to the recommended{' '}
           <strong>128&nbsp;kbps stereo MP3</strong> before adding it to a bhajan. Convert here, then{' '}
           <strong>download</strong> the files or <strong>attach</strong> them straight to a bhajan.
-          This tool runs only on your computer (it needs the local helper&nbsp;server).
         </p>
 
-        {serverUp === false && (
-          <div className="convert-banner error">
-            <strong>Helper server not running.</strong> Start it in a terminal:
-            <code>npm run server</code>
-            (or <code>node scripts/review-server.mjs</code>), then{' '}
-            <button className="link-btn" onClick={checkServer}>retry</button>.
-          </div>
-        )}
-
         {serverUp === null && (
-          <div className="convert-progress"><Spinner label="Checking helper server…" /></div>
+          <div className="convert-progress"><Spinner label="Checking for local helper server…" /></div>
         )}
 
-        {serverUp && (
+        {serverUp !== null && (
           <>
             <div className="convert-toolbar">
+              <label className="bitrate-select">
+                Engine:
+                <select value={engine} onChange={(e) => setEngine(e.target.value)}>
+                  <option value="local" disabled={!serverUp}>
+                    Local server{serverUp ? '' : ' (not running)'}
+                  </option>
+                  <option value="browser">In browser</option>
+                </select>
+              </label>
               <label className="bitrate-select">
                 Bitrate:
                 <select value={bitrate} onChange={(e) => setBitrate(e.target.value)}>
@@ -211,6 +224,25 @@ function AudioConvert({ user }) {
               </label>
               <span className="toolbar-hint">Files start converting as soon as you add them.</span>
             </div>
+
+            {engine === 'browser' && (
+              <div className="convert-banner">
+                Converting <strong>in your browser</strong> — works anywhere, no helper server needed.
+                The first file takes a bit longer (it loads the converter, ~25&nbsp;MB once), and large
+                files are slower than the local server. Files convert one at a time.
+              </div>
+            )}
+            {engine === 'local' && (
+              <div className="convert-banner">
+                Using the <strong>local helper server</strong> (fast). Only available on your computer.
+              </div>
+            )}
+            {!serverUp && (
+              <div className="convert-banner subtle">
+                Local server not detected. To use it, run <code>npm run server</code> and{' '}
+                <button className="link-btn" onClick={checkServer}>re-check</button>.
+              </div>
+            )}
 
             <div
               className={`convert-picker ${isDragging ? 'dragging' : ''}`}

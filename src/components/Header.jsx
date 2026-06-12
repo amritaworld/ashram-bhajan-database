@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../config/supabase'
-import { isLocalHost } from '../utils/env'
 import '../styles/Header.css'
 
 function Header({ userRole }) {
@@ -61,14 +60,12 @@ function Header({ userRole }) {
               >
                 Import
               </button>
-              {isLocalHost && (
-                <button
-                  onClick={() => handleNavigation('/audio-convert')}
-                  className={`nav-link ${isActive('/audio-convert') ? 'active' : ''}`}
-                >
-                  Audio Converter
-                </button>
-              )}
+              <button
+                onClick={() => handleNavigation('/audio-convert')}
+                className={`nav-link ${isActive('/audio-convert') ? 'active' : ''}`}
+              >
+                Audio Converter
+              </button>
             </>
           )}
           {userRole === 'admin' && (
