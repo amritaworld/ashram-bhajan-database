@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
-import { enrichBhajan } from '../utils/excelEnrich'
 import AudioPlayer from '../components/AudioPlayer'
 import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
@@ -328,34 +327,15 @@ function BhajanForm() {
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
       const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
 
-      // Auto-enrich from layamritam data if fields are empty
-      let enrichedTheme = theme
-      let enrichedRaga = ragas
-      let enrichedTala = talas
-      let enrichedYear = year_of_recording
-      try {
-        const enriched = await enrichBhajan({ name })
-        if (enriched._enrichmentUsed) {
-          if (!theme && enriched.theme) enrichedTheme = enriched.theme
-          if (!ragas.length && enriched.raga) enrichedRaga = enriched.raga.split(',').map(s => s.trim())
-          if (!talas.length && enriched.tala) enrichedTala = enriched.tala.split(',').map(s => s.trim())
-          if (!year_of_recording && enriched.year) enrichedYear = enriched.year
-          // Show info about enrichment
-          console.log('Auto-enriched:', enriched._enrichmentFields)
-        }
-      } catch (err) {
-        console.warn('Enrichment failed:', err)
-      }
-
       let savedId = id
 
       if (id) {
         const { error: updateError } = await supabase
           .from('bhajans')
           .update({
-            name, theme: enrichedTheme, language, raga: enrichedRaga.join(', '), tala: enrichedTala.join(', '),
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
-            year_of_recording: enrichedYear ? parseInt(enrichedYear) : null,
+            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,
@@ -376,9 +356,9 @@ function BhajanForm() {
           .from('bhajans')
           .insert([{
             bhajan_id: generatedBhajanId,
-            name, theme: enrichedTheme, language, raga: enrichedRaga.join(', '), tala: enrichedTala.join(', '),
+            name, theme, language, raga: ragas.join(', '), tala: talas.join(', '),
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
-            year_of_recording: enrichedYear ? parseInt(enrichedYear) : null,
+            year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
             meaning: JSON.stringify(meaningObj),
             status,

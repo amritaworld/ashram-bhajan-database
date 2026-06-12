@@ -203,19 +203,19 @@ function BulkImport({ user }) {
       // Stanza used for duplicate detection (classified in the pass below)
       const stanza = dedupStanza(p.data.lyrics_english, p.data.lyrics_malayalam)
 
-      // Auto-enrich from layamritam data
+      // Auto-fill ONLY Theme and Year from the layamritam reference.
+      // Raga and Tala are never auto-filled — they come from user input only.
       let enrichment = null
       try {
         const enriched = await enrichBhajan({ name: title })
-        if (enriched._enrichmentUsed) {
+        const keep = (enriched._enrichmentFields || []).filter((f) => f === 'theme' || f === 'year')
+        if (enriched._enrichmentUsed && keep.length) {
           enrichment = {
-            theme: enriched.theme,
-            raga: enriched.raga,
-            tala: enriched.tala,
-            year: enriched.year,
+            theme: keep.includes('theme') ? enriched.theme : null,
+            year: keep.includes('year') ? enriched.year : null,
             reason: enriched._enrichmentConfidence >= 90 ? 'High confidence match' : 'Fuzzy match'
           }
-          messages.push(`✨ Enriched (${enriched._enrichmentFields.join(', ')})`)
+          messages.push(`✨ Auto-filled (${keep.join(', ')})`)
         }
       } catch (err) {
         // Silently skip enrichment errors
@@ -314,8 +314,8 @@ function BulkImport({ user }) {
     copyright_status: 'pending',
     license_type: 'proprietary',
     theme: r.enrichment?.theme || null,
-    raga: r.enrichment?.raga || null,
-    tala: r.enrichment?.tala || null,
+    raga: null, // never auto-filled — user input only
+    tala: null, // never auto-filled — user input only
     year: r.enrichment?.year || null,
     internal_notes: [
       r.isReview ? 'Bulk import (flagged in _REVIEW)' : 'Bulk import',
