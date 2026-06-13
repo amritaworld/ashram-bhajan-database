@@ -171,9 +171,22 @@ function UserManagement({ user }) {
       return
     }
 
-    if (window.confirm(`Delete user ${userEmail}?`)) {
+    if (window.confirm(`Delete user ${userEmail}? This removes their login completely.`)) {
       try {
-        await supabase.from('users').delete().eq('id', userId)
+        // Delete via the secure server endpoint (service key, admin-only) so
+        // BOTH the login and the profile row are removed. The old browser
+        // delete only removed the profile, leaving the email still "taken".
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch('/api/admin-delete-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({ userId })
+        })
+        const out = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(out.error || 'Delete failed')
         await fetchUsers()
         alert('User deleted successfully')
       } catch (err) {
