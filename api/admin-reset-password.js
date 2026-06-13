@@ -72,7 +72,7 @@ export default async function handler(req, res) {
   const userId = (body.userId || '').trim()
   const newPassword = body.newPassword || ''
   if (!userId) return send(res, 400, { error: 'Missing userId' })
-  if (newPassword.length < 6) return send(res, 400, { error: 'Password must be at least 6 characters' })
+  if (newPassword.length < 8) return send(res, 400, { error: 'Password must be at least 8 characters' })
 
   try {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${userId}`, {

@@ -94,8 +94,8 @@ function UserManagement({ user }) {
         // Optional: reset this user's password (admin sets it directly via the
         // secure server endpoint, which uses the service_role key).
         if (formData.newPassword) {
-          if (formData.newPassword.length < 6) {
-            alert('New password must be at least 6 characters')
+          if (formData.newPassword.length < 8) {
+            alert('New password must be at least 8 characters')
             setLoading(false)
             return
           }

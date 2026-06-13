@@ -10,6 +10,28 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xzjjelyvwwtwzirbu
 const SUPABASE_ANON = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_IXJ2u6HkB261V4C4Sw05cQ_NwN7qTas'
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+// Lightweight in-memory rate limiter — best-effort defense-in-depth on top
+// of Supabase's own auth rate limiting. State lives per warm serverless
+// instance, so it slows naive brute-forcing without extra infrastructure.
+const ATTEMPTS = new Map() // ip -> [timestamps]
+const WINDOW_MS = 5 * 60 * 1000
+const MAX_ATTEMPTS = 10
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for']
+  if (xff) return String(xff).split(',')[0].trim()
+  return req.socket?.remoteAddress || 'unknown'
+}
+function tooManyAttempts(ip) {
+  const now = Date.now()
+  const recent = (ATTEMPTS.get(ip) || []).filter(t => now - t < WINDOW_MS)
+  recent.push(now)
+  ATTEMPTS.set(ip, recent)
+  if (ATTEMPTS.size > 5000) {
+    for (const [k, v] of ATTEMPTS) if (v.every(t => now - t >= WINDOW_MS)) ATTEMPTS.delete(k)
+  }
+  return recent.length > MAX_ATTEMPTS
+}
+
 function send(res, status, obj) {
   res.statusCode = status
   res.setHeader('Content-Type', 'application/json')
@@ -43,6 +65,10 @@ async function emailForUsername(username) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' })
   if (!SERVICE_KEY) return send(res, 500, { error: 'Server not configured for username login' })
+
+  if (tooManyAttempts(clientIp(req))) {
+    return send(res, 429, { error: 'Too many attempts. Please wait a few minutes and try again.' })
+  }
 
   let body
   try {

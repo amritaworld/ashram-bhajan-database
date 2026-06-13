@@ -86,7 +86,7 @@ export default async function handler(req, res) {
   if (!/^[a-z0-9._-]{3,}$/.test(username)) {
     return send(res, 400, { error: 'Username must be at least 3 characters: letters, numbers, dot, underscore or hyphen' })
   }
-  if (password.length < 6) return send(res, 400, { error: 'Password must be at least 6 characters' })
+  if (password.length < 8) return send(res, 400, { error: 'Password must be at least 8 characters' })
 
   // 1) Create the auth account (email pre-confirmed so they can log in now).
   let newUserId

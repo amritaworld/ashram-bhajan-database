@@ -47,6 +47,23 @@ function send(res, status, obj) {
   res.end(JSON.stringify(obj))
 }
 
+// Lightweight in-memory per-user rate limiter so a single (possibly
+// compromised) account can't run up the AI bill. Best-effort: state lives
+// per warm serverless instance.
+const CALLS = new Map() // userId -> [timestamps]
+const WINDOW_MS = 10 * 60 * 1000
+const MAX_CALLS = 60
+function tooManyCalls(userId) {
+  const now = Date.now()
+  const recent = (CALLS.get(userId) || []).filter(t => now - t < WINDOW_MS)
+  recent.push(now)
+  CALLS.set(userId, recent)
+  if (CALLS.size > 5000) {
+    for (const [k, v] of CALLS) if (v.every(t => now - t >= WINDOW_MS)) CALLS.delete(k)
+  }
+  return recent.length > MAX_CALLS
+}
+
 async function verifyUser(token) {
   if (!token) return null
   try {
@@ -97,6 +114,9 @@ export default async function handler(req, res) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
   const user = await verifyUser(token)
   if (!user) return send(res, 401, { error: 'Not authenticated' })
+  if (tooManyCalls(user.id || user.email || 'unknown')) {
+    return send(res, 429, { error: 'Too many requests. Please wait a few minutes and try again.' })
+  }
 
   let body
   try {
