@@ -402,7 +402,7 @@ function Dashboard({ user, userRole }) {
                     <span key={`tala-${t}`} className="meta-badge">{t}</span>
                   ))}
                   <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
-                    {bhajan.copyright_status === 'approved' ? 'COPYRIGHTED' : 'PENDING'}
+                    {bhajan.copyright_status === 'approved' ? '© COPYRIGHTED' : '© COPYRIGHT PENDING'}
                   </span>
                 </div>
                 {bhajan.duration_minutes && (
