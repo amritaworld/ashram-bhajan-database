@@ -37,6 +37,11 @@ function App() {
         .eq('id', session.user.id)
         .single()
       setUserRole(data?.role || 'viewer')
+    } else {
+      // No session (e.g. just logged out) — clear the user so the app
+      // drops back to the login screen instead of going blank.
+      setUser(null)
+      setUserRole(null)
     }
     setLoading(false)
   }

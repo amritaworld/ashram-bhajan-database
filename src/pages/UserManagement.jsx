@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
-import { supabase, SUPABASE_URL, SUPABASE_KEY } from '../config/supabase'
+import { supabase } from '../config/supabase'
 import Spinner from '../components/Spinner'
 import '../styles/Admin.css'
-
-// A separate client used only to sign up new users, so creating a user
-// does NOT replace the logged-in admin's session.
-const signupClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false }
-})
 
 function UserManagement({ user }) {
   const [users, setUsers] = useState([])
@@ -128,26 +121,25 @@ function UserManagement({ user }) {
           return
         }
 
-        const { data: signUpData, error: authError } = await signupClient.auth.signUp({
-          email: formData.email,
-          password: formData.password
-        })
-
-        if (authError) throw authError
-        const newUserId = signUpData.user?.id
-        if (!newUserId) throw new Error('User could not be created')
-
-        const { error: dbError } = await supabase
-          .from('users')
-          .insert([{
-            id: newUserId,
+        // Create the user via the secure server endpoint (uses the service
+        // key, admin-only). This lets us keep public sign-ups switched OFF.
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch('/api/admin-create-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`
+          },
+          body: JSON.stringify({
             email: formData.email,
             username,
+            password: formData.password,
             display_name: formData.display_name,
             role: formData.role
-          }])
-
-        if (dbError) throw dbError
+          })
+        })
+        const out = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(out.error || 'User could not be created')
         alert('User created successfully!')
       }
 
