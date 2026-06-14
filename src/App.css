@@ -277,6 +277,82 @@ body {
   margin-top: 0.25rem;
 }
 
+/* Floating save bar — sits in the gutter to the RIGHT of the form card,
+   vertically centred and always visible while scrolling. Outside the form,
+   never overlapping its fields. */
+.floating-save-bar {
+  position: fixed;
+  /* Hug the right edge of the 900px-wide centred form card (50% + 450px),
+     with a small gap — so the buttons sit beside the form, not at the
+     window's edge. */
+  left: calc(50% + 466px);
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.6rem;
+  padding: 0.9rem;
+  background: rgba(17, 17, 20, 0.95);
+  border: 1px solid #2a2a30;
+  border-radius: 0.875rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.floating-save-bar .btn-primary,
+.floating-save-bar .btn-secondary {
+  padding: 0.7rem 1.4rem;
+  font-size: 0.9rem;
+  box-shadow: none;
+  width: 100%;
+}
+
+.autosave-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: center;
+  margin: 0 0 0.15rem 0;
+}
+
+.autosave-pending { color: #a7a7a7; }
+.autosave-saving { color: #d6a84f; }
+.autosave-saved { color: #4caf50; }
+.autosave-error { color: #ef4444; }
+
+/* Give the form card room so the floating bar never hides the last fields */
+.form-card {
+  margin-bottom: 6rem;
+}
+
+/* Narrower screens have no side gutter — drop the bar to the bottom-centre
+   as a horizontal row so it never lands on top of the form. */
+@media (max-width: 1240px) {
+  .floating-save-bar {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: 1.25rem;
+    transform: translateX(-50%);
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .floating-save-bar .btn-primary,
+  .floating-save-bar .btn-secondary {
+    width: auto;
+  }
+
+  .autosave-status {
+    margin: 0 0.25rem 0 0;
+  }
+}
+
 .btn-edit {
   padding: 0.5rem 1rem;
   background-color: transparent;

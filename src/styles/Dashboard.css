@@ -88,29 +88,142 @@
 }
 
 .search-box {
-  margin-bottom: 1rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.25rem;
 }
 
-.search-input {
+.search-icon {
+  position: absolute;
+  left: 1.15rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+/* Scoped to .search-box so a same-named `.search-input` in another stylesheet
+   (ContributorManagement.css) can't override the padding/shade. */
+.search-box .search-input {
   width: 100%;
-  padding: 0.875rem;
-  background-color: #18181c;
-  border: 1px solid #2a2a30;
-  border-radius: 0.5rem;
+  padding: 1.15rem 3rem 1.15rem 3.5rem;
+  background-color: #2c2c33;
+  border: 2px solid #d6a84f;
+  border-radius: 0.75rem;
   color: #f5f5f5;
+  font-size: 1.05rem;
+  box-shadow: 0 0 0 3px rgba(214, 168, 79, 0.08);
+}
+
+.search-box .search-input::placeholder {
+  color: #b5b5b5;
+}
+
+.search-box .search-input:focus {
+  outline: none;
+  border-color: #e8bd62;
+  box-shadow: 0 0 0 4px rgba(214, 168, 79, 0.2);
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.9rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: 50%;
+  background: #2a2a30;
+  color: #f5f5f5;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear:hover {
+  background: #d6a84f;
+  color: #0b0b0d;
+}
+
+/* Contributor filter row (name + role checkboxes) */
+.contributor-filter {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2a30;
+}
+
+.contributor-filter .filter-field {
+  flex: 0 1 250px;
+}
+
+.contributor-filter .role-checkboxes {
+  padding-bottom: 0.6rem;
+}
+
+.role-checkboxes {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.role-checkboxes-label {
+  color: #a7a7a7;
   font-size: 0.875rem;
 }
 
-.search-input:focus {
-  outline: none;
-  border-color: #d6a84f;
-  box-shadow: 0 0 0 3px rgba(214, 168, 79, 0.1);
+.role-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #d6d6d6;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.role-checkbox input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: #d6a84f;
+  cursor: pointer;
 }
 
 .filter-controls {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+/* A filter dropdown with its small heading stacked above it */
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8a8a8a;
+}
+
+.filter-field .filter-select {
+  flex: none;
+  width: 100%;
+  min-width: 0;
 }
 
 .filter-select {
@@ -229,9 +342,37 @@
 
 .bhajan-meta {
   display: flex;
-  gap: 0.5rem;
+  gap: 1.25rem;
   margin: 0.75rem 0;
   flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.meta-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7a7a7a;
+}
+
+.meta-values {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.bhajan-updated {
+  margin: 0.5rem 0 0 0;
+  color: #777;
+  font-size: 0.75rem;
+  font-style: italic;
 }
 
 .meta-badge {

@@ -14,6 +14,24 @@ const toList = (s) => (s || '').split(',').map((x) => x.trim()).filter(Boolean)
 // Every raga a bhajan has across systems — used for the filter dropdown/match.
 const allRagas = (b) => toList([b.raga_carnatic, b.raga_hindustani, b.raga].join(','))
 
+// Contributor roles we can filter by (value stored = lowercase, label = display).
+const CONTRIBUTOR_ROLES = [
+  { value: 'lyricist', label: 'Lyricist' },
+  { value: 'composer', label: 'Composer' },
+  { value: 'singer', label: 'Singer' },
+]
+
+// Format a timestamp as DD-MM-YY for the "last updated" line.
+const formatDate = (ts) => {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d.getTime())) return ''
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yy = String(d.getFullYear()).slice(-2)
+  return `${dd}-${mm}-${yy}`
+}
+
 function Dashboard({ user, userRole }) {
   const navigate = useNavigate()
   const [bhajans, setBhajans] = useState([])
@@ -25,6 +43,8 @@ function Dashboard({ user, userRole }) {
   const [filterLanguage, setFilterLanguage] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterCopyright, setFilterCopyright] = useState('')
+  const [filterContributor, setFilterContributor] = useState('')
+  const [filterRoles, setFilterRoles] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 20
   const [stats, setStats] = useState({
@@ -37,6 +57,11 @@ function Dashboard({ user, userRole }) {
   const [themeColors, setThemeColors] = useState({})
   const [ragas, setRagas] = useState([])
   const [languages, setLanguages] = useState([])
+  // id -> display name (username, else full name) for the "last updated by" line
+  const [userMap, setUserMap] = useState({})
+  // bhajan id -> [{ name, role }] for the contributor filter
+  const [contributorMap, setContributorMap] = useState({})
+  const [contributorNames, setContributorNames] = useState([])
   const [selectedBhajan, setSelectedBhajan] = useState(null)
   const [selectedLyrics, setSelectedLyrics] = useState(null)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -45,6 +70,8 @@ function Dashboard({ user, userRole }) {
     loadBhajans()
     loadStats()
     loadThemeColors()
+    loadUsers()
+    loadContributorData()
   }, [])
 
   const loadThemeColors = async () => {
@@ -56,9 +83,45 @@ function Dashboard({ user, userRole }) {
     }
   }
 
+  // Who edited each bhajan — map user id to a display name for the listing.
+  const loadUsers = async () => {
+    const { data } = await supabase.from('users').select('id, username, full_name')
+    if (data) {
+      const map = {}
+      data.forEach(u => { map[u.id] = u.full_name || u.username || '' })
+      setUserMap(map)
+    }
+  }
+
+  // Pull lyricist/composer/singer names per bhajan so we can filter by them.
+  const loadContributorData = async () => {
+    try {
+      const [{ data: writers }, { data: singers }] = await Promise.all([
+        supabase.from('bhajan_writers').select('bhajan_id, writer_name, writer_role'),
+        supabase.from('bhajan_singers').select('bhajan_id, singer_name'),
+      ])
+
+      const map = {}
+      const names = new Set()
+      const add = (bhajanId, name, role) => {
+        if (!bhajanId || !name) return
+        if (!map[bhajanId]) map[bhajanId] = []
+        map[bhajanId].push({ name, role })
+        names.add(name)
+      }
+      ;(writers || []).forEach(w => add(w.bhajan_id, w.writer_name, w.writer_role))
+      ;(singers || []).forEach(s => add(s.bhajan_id, s.singer_name, 'singer'))
+
+      setContributorMap(map)
+      setContributorNames([...names].sort((a, b) => a.localeCompare(b)))
+    } catch (err) {
+      console.error('Error loading contributor data:', err)
+    }
+  }
+
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, filterContributor, filterRoles, contributorMap, bhajans])
 
   // Keep selection in sync with what's visible — drop ids that filtered out
   useEffect(() => {
@@ -163,8 +226,28 @@ function Dashboard({ user, userRole }) {
       )
     }
 
+    // Contributor filter: keep bhajans that have a matching contributor.
+    // - a name picked  → that person must be on the bhajan
+    // - role(s) picked → in one of the picked roles (else any role)
+    if (filterContributor || filterRoles.length) {
+      const nameLc = filterContributor.toLowerCase()
+      filtered = filtered.filter(b => {
+        const entries = contributorMap[b.id] || []
+        return entries.some(e =>
+          (!filterContributor || e.name.toLowerCase() === nameLc) &&
+          (filterRoles.length === 0 || filterRoles.includes(e.role))
+        )
+      })
+    }
+
     setFilteredBhajans(filtered)
     setCurrentPage(1)
+  }
+
+  const toggleRole = (role) => {
+    setFilterRoles(prev =>
+      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
+    )
   }
 
   const handleDelete = async (id) => {
@@ -251,71 +334,98 @@ function Dashboard({ user, userRole }) {
 
       <div className="search-filter-section">
         <div className="search-box">
+          <span className="search-icon" aria-hidden="true">🔍</span>
           <input
             type="text"
-            placeholder="Search bhajans..."
+            placeholder="Search by bhajan name or first line of Malayalam lyrics..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="search-clear"
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          )}
         </div>
 
         <div className="filter-controls">
-          <select
-            value={filterTheme}
-            onChange={(e) => setFilterTheme(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Themes</option>
-            {themes.map(theme => (
-              <option key={theme} value={theme}>{theme}</option>
-            ))}
-          </select>
+          <div className="filter-field">
+            <label className="filter-label">Theme</label>
+            <select
+              value={filterTheme}
+              onChange={(e) => setFilterTheme(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Themes</option>
+              {themes.map(theme => (
+                <option key={theme} value={theme}>{theme}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filterRaga}
-            onChange={(e) => setFilterRaga(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Ragas</option>
-            {ragas.map(raga => (
-              <option key={raga} value={raga}>{raga}</option>
-            ))}
-          </select>
+          <div className="filter-field">
+            <label className="filter-label">Raga</label>
+            <select
+              value={filterRaga}
+              onChange={(e) => setFilterRaga(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Ragas</option>
+              {ragas.map(raga => (
+                <option key={raga} value={raga}>{raga}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filterLanguage}
-            onChange={(e) => setFilterLanguage(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Languages</option>
-            {languages.map(lang => (
-              <option key={lang} value={lang}>{lang}</option>
-            ))}
-          </select>
+          <div className="filter-field">
+            <label className="filter-label">Language</label>
+            <select
+              value={filterLanguage}
+              onChange={(e) => setFilterLanguage(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Languages</option>
+              {languages.map(lang => (
+                <option key={lang} value={lang}>{lang}</option>
+              ))}
+            </select>
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="archived">Archived</option>
-          </select>
+          <div className="filter-field">
+            <label className="filter-label">Status</label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
 
-          <select
-            value={filterCopyright}
-            onChange={(e) => setFilterCopyright(e.target.value)}
-            className="filter-select"
-          >
-            <option value="">All Copyrights</option>
-            <option value="approved">Copyrighted</option>
-            <option value="pending">Pending</option>
-          </select>
+          <div className="filter-field">
+            <label className="filter-label">Copyright</label>
+            <select
+              value={filterCopyright}
+              onChange={(e) => setFilterCopyright(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Copyrights</option>
+              <option value="approved">Copyrighted</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
 
-          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus || filterCopyright) && (
+          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus || filterCopyright || filterContributor || filterRoles.length > 0) && (
             <button
               onClick={() => {
                 setSearchTerm('')
@@ -324,12 +434,43 @@ function Dashboard({ user, userRole }) {
                 setFilterLanguage('')
                 setFilterStatus('')
                 setFilterCopyright('')
+                setFilterContributor('')
+                setFilterRoles([])
               }}
               className="btn-secondary"
             >
               Clear Filters
             </button>
           )}
+        </div>
+
+        <div className="contributor-filter">
+          <div className="filter-field">
+            <label className="filter-label">Contributor</label>
+            <select
+              value={filterContributor}
+              onChange={(e) => setFilterContributor(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Contributors</option>
+              {contributorNames.map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          <div className="role-checkboxes">
+            <span className="role-checkboxes-label">as a</span>
+            {CONTRIBUTOR_ROLES.map(({ value, label }) => (
+              <label key={value} className="role-checkbox">
+                <input
+                  type="checkbox"
+                  checked={filterRoles.includes(value)}
+                  onChange={() => toggleRole(value)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -383,30 +524,69 @@ function Dashboard({ user, userRole }) {
                 <h3>{bhajan.name}</h3>
                 <div className="bhajan-meta">
                   {bhajan.theme && (
-                    <span
-                      className="meta-badge theme-badge"
-                      style={themeColors[bhajan.theme] ? {
-                        backgroundColor: `${themeColors[bhajan.theme]}26`,
-                        color: themeColors[bhajan.theme],
-                        borderColor: `${themeColors[bhajan.theme]}80`
-                      } : undefined}
-                    >
-                      {bhajan.theme}
-                    </span>
+                    <div className="meta-group">
+                      <span className="meta-label">Theme</span>
+                      <div className="meta-values">
+                        <span
+                          className="meta-badge theme-badge"
+                          style={themeColors[bhajan.theme] ? {
+                            backgroundColor: `${themeColors[bhajan.theme]}26`,
+                            color: themeColors[bhajan.theme],
+                            borderColor: `${themeColors[bhajan.theme]}80`
+                          } : undefined}
+                        >
+                          {bhajan.theme}
+                        </span>
+                      </div>
+                    </div>
                   )}
-                  {bhajan.language && <span className="meta-badge">{bhajan.language}</span>}
-                  {toList(displayRaga(bhajan)).map(r => (
-                    <span key={r} className="meta-badge">{r}</span>
-                  ))}
-                  {toList(displayTala(bhajan)).map(t => (
-                    <span key={`tala-${t}`} className="meta-badge">{t}</span>
-                  ))}
-                  <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
-                    {bhajan.copyright_status === 'approved' ? '© COPYRIGHTED' : '© COPYRIGHT PENDING'}
-                  </span>
+                  {bhajan.language && (
+                    <div className="meta-group">
+                      <span className="meta-label">Language</span>
+                      <div className="meta-values">
+                        <span className="meta-badge">{bhajan.language}</span>
+                      </div>
+                    </div>
+                  )}
+                  {toList(displayRaga(bhajan)).length > 0 && (
+                    <div className="meta-group">
+                      <span className="meta-label">Raga</span>
+                      <div className="meta-values">
+                        {toList(displayRaga(bhajan)).map(r => (
+                          <span key={r} className="meta-badge">{r}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {toList(displayTala(bhajan)).length > 0 && (
+                    <div className="meta-group">
+                      <span className="meta-label">Tala</span>
+                      <div className="meta-values">
+                        {toList(displayTala(bhajan)).map(t => (
+                          <span key={`tala-${t}`} className="meta-badge">{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="meta-group">
+                    <span className="meta-label">© Status</span>
+                    <div className="meta-values">
+                      <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
+                        {bhajan.copyright_status === 'approved' ? '© COPYRIGHTED' : '© COPYRIGHT PENDING'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 {bhajan.duration_minutes && (
                   <p className="bhajan-duration">⏱️ {bhajan.duration_minutes} min</p>
+                )}
+                {bhajan.updated_at && (
+                  <p className="bhajan-updated">
+                    Last updated on {formatDate(bhajan.updated_at)}
+                    {userMap[bhajan.updated_by || bhajan.created_by]
+                      ? ` by ${userMap[bhajan.updated_by || bhajan.created_by]}`
+                      : ''}
+                  </p>
                 )}
               </div>
               <div className="bhajan-actions">

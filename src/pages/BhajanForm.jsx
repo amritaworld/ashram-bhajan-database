@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import AudioPlayer from '../components/AudioPlayer'
@@ -11,6 +11,21 @@ import { malayalamToIAST } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
+// Serialise every saved field into a stable string. Used to detect whether the
+// form has changed since the last save, so autosave only writes on real edits.
+const makeSnapshot = (v) => JSON.stringify({
+  name: v.name, theme: v.theme, language: v.language, originalBhajanId: v.originalBhajanId,
+  ragasCarnatic: v.ragasCarnatic, ragasHindustani: v.ragasHindustani,
+  talasCarnatic: v.talasCarnatic, talasHindustani: v.talasHindustani,
+  ragaRemarks: v.ragaRemarks, talaRemarks: v.talaRemarks, notes: v.notes,
+  duration_minutes: v.duration_minutes, year_of_recording: v.year_of_recording,
+  lyrics_malayalam: v.lyrics_malayalam, lyrics_english: v.lyrics_english,
+  meaning_malayalam: v.meaning_malayalam, meaning_english: v.meaning_english,
+  status: v.status, copyrightHolder: v.copyrightHolder,
+  copyrightStatus: v.copyrightStatus, licenseType: v.licenseType,
+  lyricists: v.lyricists, composers: v.composers, singers: v.singers,
+})
+
 function BhajanForm() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -22,6 +37,8 @@ function BhajanForm() {
   const [ragasHindustani, setRagasHindustani] = useState([])
   const [talasCarnatic, setTalasCarnatic] = useState([])
   const [talasHindustani, setTalasHindustani] = useState([])
+  const [ragaRemarks, setRagaRemarks] = useState('')
+  const [talaRemarks, setTalaRemarks] = useState('')
   const [notes, setNotes] = useState('')
   const [duration_minutes, setDuration] = useState('')
   const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
@@ -44,6 +61,12 @@ function BhajanForm() {
   const [audioFiles, setAudioFiles] = useState([])
   const [uploadingAudio, setUploadingAudio] = useState(false)
   const [loading, setLoading] = useState(false)
+  // Autosave status for existing bhajans: idle | pending | saving | saved | error
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle')
+  // Snapshot of the last-persisted form state, so autosave only fires on changes.
+  // Stays null until an existing bhajan finishes loading (guards against the
+  // empty initial form overwriting the record).
+  const lastSavedRef = useRef(null)
   const [user, setUser] = useState(null)
   const [bhajanId, setBhajanId] = useState('')
   const [themes, setThemes] = useState([])
@@ -157,6 +180,35 @@ function BhajanForm() {
       .substring(0, 50)
   }
 
+  // Snapshot of the current form state (for autosave change-detection).
+  const snapshot = () => makeSnapshot({
+    name, theme, language, originalBhajanId,
+    ragasCarnatic, ragasHindustani, talasCarnatic, talasHindustani,
+    ragaRemarks, talaRemarks, notes, duration_minutes, year_of_recording,
+    lyrics_malayalam, lyrics_english, meaning_malayalam, meaning_english,
+    status, copyrightHolder, copyrightStatus, licenseType,
+    lyricists, composers, singers,
+  })
+
+  // Autosave — existing bhajans only. Debounced 1.5s after the last change.
+  // The null-baseline guard plus the debounce mean the initial load never
+  // triggers a write; only genuine edits do.
+  useEffect(() => {
+    if (!id || loading || lastSavedRef.current === null) return
+    if (snapshot() === lastSavedRef.current) return
+    setAutoSaveStatus('pending')
+    const t = setTimeout(() => { saveBhajan({ silent: true }) }, 1500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    name, theme, language, originalBhajanId,
+    ragasCarnatic, ragasHindustani, talasCarnatic, talasHindustani,
+    ragaRemarks, talaRemarks, notes, duration_minutes, year_of_recording,
+    lyrics_malayalam, lyrics_english, meaning_malayalam, meaning_english,
+    status, copyrightHolder, copyrightStatus, licenseType,
+    lyricists, composers, singers, id, loading,
+  ])
+
   const loadBhajan = async () => {
     setLoading(true)
     const { data } = await supabase
@@ -174,41 +226,62 @@ function BhajanForm() {
       // Split comma lists into tags. Fallback for un-migrated rows: existing
       // single-field raga is Carnatic, single-field tala is Hindustani.
       const toTags = (s) => (s ? s.split(',').map(t => t.trim()).filter(Boolean) : [])
-      setRagasCarnatic(toTags(data.raga_carnatic || data.raga))
-      setRagasHindustani(toTags(data.raga_hindustani))
-      setTalasCarnatic(toTags(data.tala_carnatic))
-      setTalasHindustani(toTags(data.tala_hindustani || data.tala))
-      setNotes(data.notes || '')
-      setDuration(data.duration_minutes || '')
-      setYearOfRecording(data.year_of_recording || new Date().getFullYear())
+      const rc = toTags(data.raga_carnatic || data.raga)
+      const rh = toTags(data.raga_hindustani)
+      const tc = toTags(data.tala_carnatic)
+      const th = toTags(data.tala_hindustani || data.tala)
+      setRagasCarnatic(rc)
+      setRagasHindustani(rh)
+      setTalasCarnatic(tc)
+      setTalasHindustani(th)
+      const ragaRem = data.raga_remarks || ''
+      const talaRem = data.tala_remarks || ''
+      setRagaRemarks(ragaRem)
+      setTalaRemarks(talaRem)
+      const notesVal = data.notes || ''
+      const durationVal = data.duration_minutes || ''
+      const yearVal = data.year_of_recording || new Date().getFullYear()
+      setNotes(notesVal)
+      setDuration(durationVal)
+      setYearOfRecording(yearVal)
 
+      let lyMal = '', lyEng = '', meMal = '', meEng = ''
       try {
         const lyricsData = typeof data.lyrics === 'string' ? JSON.parse(data.lyrics) : data.lyrics || {}
         const meaningData = typeof data.meaning === 'string' ? JSON.parse(data.meaning) : data.meaning || {}
-        setLyricsMalayalam(lyricsData.malayalam || '')
-        setLyricsEnglish(lyricsData.english || '')
-        // Preserve any existing English (IAST) — don't auto-overwrite it.
-        setEnglishManual(!!(lyricsData.english || '').trim())
-        setMeaningMalayalam(meaningData.malayalam || '')
-        setMeaningEnglish(meaningData.english || '')
+        lyMal = lyricsData.malayalam || ''
+        lyEng = lyricsData.english || ''
+        meMal = meaningData.malayalam || ''
+        meEng = meaningData.english || ''
       } catch (e) {
-        setLyricsMalayalam(data.lyrics || '')
-        setMeaningMalayalam(data.meaning || '')
+        lyMal = data.lyrics || ''
+        meMal = data.meaning || ''
       }
+      setLyricsMalayalam(lyMal)
+      setLyricsEnglish(lyEng)
+      // Preserve any existing English (IAST) — don't auto-overwrite it.
+      setEnglishManual(!!lyEng.trim())
+      setMeaningMalayalam(meMal)
+      setMeaningEnglish(meEng)
 
-      setStatus(data.status || 'draft')
-      setCopyrightHolder(data.copyright_holder || 'Mata Amritanandamayi Math')
-      setCopyrightStatus(data.copyright_status || 'pending')
-      setLicenseType(data.license_type || 'proprietary')
+      const statusVal = data.status || 'draft'
+      const holderVal = data.copyright_holder || 'Mata Amritanandamayi Math'
+      const cstatusVal = data.copyright_status || 'pending'
+      const licenseVal = data.license_type || 'proprietary'
+      setStatus(statusVal)
+      setCopyrightHolder(holderVal)
+      setCopyrightStatus(cstatusVal)
+      setLicenseType(licenseVal)
 
       const { data: writersData } = await supabase
         .from('bhajan_writers')
         .select('*')
         .eq('bhajan_id', id)
 
+      let lyricistsList = [], composersList = []
       if (writersData && writersData.length > 0) {
-        const lyricistsList = writersData.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name)
-        const composersList = writersData.filter(w => w.writer_role === 'composer').map(w => w.writer_name)
+        lyricistsList = writersData.filter(w => w.writer_role === 'lyricist').map(w => w.writer_name)
+        composersList = writersData.filter(w => w.writer_role === 'composer').map(w => w.writer_name)
         setLyricists(lyricistsList)
         setComposers(composersList)
       }
@@ -217,9 +290,26 @@ function BhajanForm() {
         .from('bhajan_singers')
         .select('*')
         .eq('bhajan_id', id)
+      let singerNames = []
       if (singersData && singersData.length > 0) {
-        setSingers(singersData.map(s => s.singer_name))
+        singerNames = singersData.map(s => s.singer_name)
+        setSingers(singerNames)
       }
+
+      // Establish the autosave baseline from exactly what we loaded, so the
+      // first edit (and only a real edit) triggers a save.
+      lastSavedRef.current = makeSnapshot({
+        name: data.name || '', theme: data.theme || '', language: data.language || '',
+        originalBhajanId: data.original_bhajan_id || '',
+        ragasCarnatic: rc, ragasHindustani: rh, talasCarnatic: tc, talasHindustani: th,
+        ragaRemarks: ragaRem, talaRemarks: talaRem, notes: notesVal,
+        duration_minutes: durationVal, year_of_recording: yearVal,
+        lyrics_malayalam: lyMal, lyrics_english: lyEng,
+        meaning_malayalam: meMal, meaning_english: meEng,
+        status: statusVal, copyrightHolder: holderVal,
+        copyrightStatus: cstatusVal, licenseType: licenseVal,
+        lyricists: lyricistsList, composers: composersList, singers: singerNames,
+      })
 
       await loadAudioFiles(data.bhajan_id)
     }
@@ -338,13 +428,18 @@ function BhajanForm() {
     }
   }
 
-  const handleSave = async () => {
+  const saveBhajan = async ({ silent = false } = {}) => {
     if (!name) {
-      alert('Enter bhajan name')
-      return
+      if (!silent) alert('Enter bhajan name')
+      return false
     }
 
-    setLoading(true)
+    // Capture the state being persisted up front, so edits made during the
+    // save aren't lost: this exact snapshot becomes the new autosave baseline.
+    const snapAtSave = snapshot()
+
+    if (silent) setAutoSaveStatus('saving')
+    else setLoading(true)
     try {
       const generatedBhajanId = bhajanId || generateBhajanId(name)
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
@@ -363,6 +458,8 @@ function BhajanForm() {
         raga_hindustani: ragaHindustaniStr,
         tala_carnatic: talaCarnaticStr,
         tala_hindustani: talaHindustaniStr,
+        raga_remarks: ragaRemarks,
+        tala_remarks: talaRemarks,
         notes,
         raga: ragaCarnaticStr || ragaHindustaniStr,
         tala: talaCarnaticStr || talaHindustaniStr,
@@ -441,16 +538,48 @@ function BhajanForm() {
         }
       }
 
-      alert('Bhajan saved!')
-      navigate('/dashboard')
+      // This state is now persisted — update the autosave baseline.
+      lastSavedRef.current = snapAtSave
+
+      if (silent) {
+        setAutoSaveStatus('saved')
+      } else if (!id) {
+        // New bhajan just created — move into edit mode so autosave takes over
+        // and the user stays in the form.
+        navigate(`/bhajan/${savedId}/edit`)
+      } else {
+        setAutoSaveStatus('saved')
+      }
+      return true
     } catch (err) {
-      alert('Error: ' + err.message)
+      if (silent) {
+        setAutoSaveStatus('error')
+        console.error('Autosave failed:', err)
+      } else {
+        alert('Error: ' + err.message)
+      }
+      return false
+    } finally {
+      if (!silent) setLoading(false)
     }
-    setLoading(false)
+  }
+
+  const handleSave = () => saveBhajan({ silent: false })
+
+  // Click on the backdrop (outside the form card) → confirm, then leave.
+  const handleBackdropClick = (e) => {
+    if (e.target !== e.currentTarget) return
+    leaveForm()
+  }
+
+  const leaveForm = () => {
+    if (window.confirm('Leave this form and go back to the dashboard?')) {
+      navigate('/dashboard')
+    }
   }
 
   return (
-    <div className="form-container">
+    <div className="form-container" onClick={handleBackdropClick}>
       <div className="form-card">
         <h1>{id ? 'Edit Bhajan' : 'Add Bhajan'}</h1>
 
@@ -497,6 +626,15 @@ function BhajanForm() {
             />
           </div>
         </div>
+        <div className="form-group">
+          <label>Raga Remarks</label>
+          <textarea
+            value={ragaRemarks}
+            onChange={(e) => setRagaRemarks(e.target.value)}
+            rows="2"
+            placeholder="Any other complexity or notes about the raga(s)..."
+          />
+        </div>
 
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Tala</h2>
         <div className="form-row">
@@ -518,6 +656,15 @@ function BhajanForm() {
               placeholder="Hindustani tala(s)..."
             />
           </div>
+        </div>
+        <div className="form-group">
+          <label>Tala Remarks</label>
+          <textarea
+            value={talaRemarks}
+            onChange={(e) => setTalaRemarks(e.target.value)}
+            rows="2"
+            placeholder="Any other complexity or notes about the tala(s)..."
+          />
         </div>
 
         <div className="form-row">
@@ -749,14 +896,23 @@ function BhajanForm() {
           />
         )}
 
-        <div className="form-actions">
-          <button onClick={handleSave} disabled={loading || uploadingAudio} className="btn-primary">
-            {loading ? 'Saving...' : id ? 'Update' : 'Create'}
-          </button>
-          <button onClick={() => navigate('/dashboard')} className="btn-secondary">
-            Cancel
-          </button>
-        </div>
+      </div>
+
+      <div className="floating-save-bar">
+        {id && (
+          <span className={`autosave-status autosave-${autoSaveStatus}`}>
+            {autoSaveStatus === 'pending' && '✎ Unsaved changes…'}
+            {autoSaveStatus === 'saving' && '⟳ Saving…'}
+            {autoSaveStatus === 'saved' && '✓ All changes saved'}
+            {autoSaveStatus === 'error' && '⚠ Couldn’t save — check connection'}
+          </span>
+        )}
+        <button onClick={handleSave} disabled={loading || uploadingAudio} className="btn-primary floating-save-btn" type="button">
+          {loading ? 'Saving…' : id ? 'Save' : 'Create'}
+        </button>
+        <button onClick={() => leaveForm()} className="btn-secondary floating-cancel-btn" type="button">
+          Cancel
+        </button>
       </div>
     </div>
   )
