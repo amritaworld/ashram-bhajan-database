@@ -298,44 +298,64 @@ function Dashboard({ user, userRole }) {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <h1>Ashram Bhajans Portal</h1>
+        <h1>Ashram Bhajanamritam</h1>
         <p>Manage and organize bhajans</p>
       </div>
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon">📚</div>
-          <div className="stat-content">
-            <p className="stat-label">Total Bhajans</p>
-            <p className="stat-value">{stats.totalBhajans}</p>
+          <div className="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
           </div>
+          <p className="stat-value">{stats.totalBhajans}</p>
+          <p className="stat-label">Total Bhajans</p>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">👥</div>
-          <div className="stat-content">
-            <p className="stat-label">Contributors</p>
-            <p className="stat-value">{stats.totalContributors}</p>
+          <div className="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
           </div>
+          <p className="stat-value">{stats.totalContributors}</p>
+          <p className="stat-label">Contributors</p>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <p className="stat-label">Approved Copyrights</p>
-            <p className="stat-value">{stats.approvedCopyrights}</p>
+          <div className="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
           </div>
+          <p className="stat-value">{stats.approvedCopyrights}</p>
+          <p className="stat-label">Approved Copyrights</p>
         </div>
         <div className="stat-card">
-          <div className="stat-icon">📝</div>
-          <div className="stat-content">
-            <p className="stat-label">Drafts</p>
-            <p className="stat-value">{stats.draftBhajans}</p>
+          <div className="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 22h6a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v10" />
+              <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+              <path d="M10.4 12.6a2 2 0 1 1 3 3L8 21l-4 1 1-4Z" />
+            </svg>
           </div>
+          <p className="stat-value">{stats.draftBhajans}</p>
+          <p className="stat-label">Drafts</p>
         </div>
       </div>
 
       <div className="search-filter-section">
         <div className="search-box">
-          <span className="search-icon" aria-hidden="true">🔍</span>
+          <span className="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </span>
           <input
             type="text"
             placeholder="Search by bhajan name or first line of Malayalam lyrics..."
@@ -450,7 +470,13 @@ function Dashboard({ user, userRole }) {
             <label className="filter-label">Contributor</label>
             <select
               value={filterContributor}
-              onChange={(e) => setFilterContributor(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value
+                setFilterContributor(v)
+                // Roles only make sense for a specific contributor — reset (and
+                // hide) them when returning to "All Contributors".
+                if (!v) setFilterRoles([])
+              }}
               className="filter-select"
             >
               <option value="">All Contributors</option>
@@ -459,18 +485,24 @@ function Dashboard({ user, userRole }) {
               ))}
             </select>
           </div>
-          <div className="role-checkboxes">
-            <span className="role-checkboxes-label">as a</span>
-            {CONTRIBUTOR_ROLES.map(({ value, label }) => (
-              <label key={value} className="role-checkbox">
-                <input
-                  type="checkbox"
-                  checked={filterRoles.includes(value)}
-                  onChange={() => toggleRole(value)}
-                />
-                {label}
-              </label>
-            ))}
+          <div
+            className={`role-reveal${filterContributor ? ' open' : ''}`}
+            aria-hidden={!filterContributor}
+          >
+            <div className="role-checkboxes">
+              <span className="role-checkboxes-label">as a</span>
+              {CONTRIBUTOR_ROLES.map(({ value, label }) => (
+                <label key={value} className="role-checkbox">
+                  <input
+                    type="checkbox"
+                    tabIndex={filterContributor ? 0 : -1}
+                    checked={filterRoles.includes(value)}
+                    onChange={() => toggleRole(value)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -495,7 +527,7 @@ function Dashboard({ user, userRole }) {
             <div className="bulk-actions-right">
               <span className="selected-count">{selectedIds.size} selected</span>
               <button className="btn-delete" onClick={handleBulkDelete}>
-                🗑 Delete Selected ({selectedIds.size})
+                <span className="material-symbols-outlined">delete</span> Delete Selected ({selectedIds.size})
               </button>
             </div>
           )}
@@ -529,11 +561,10 @@ function Dashboard({ user, userRole }) {
                       <span className="meta-label">Theme</span>
                       <div className="meta-values">
                         <span
-                          className="meta-badge theme-badge"
+                          className="pill pill-theme"
                           style={themeColors[bhajan.theme] ? {
-                            backgroundColor: `${themeColors[bhajan.theme]}26`,
-                            color: themeColors[bhajan.theme],
-                            borderColor: `${themeColors[bhajan.theme]}80`
+                            backgroundColor: `${themeColors[bhajan.theme]}1f`,
+                            color: themeColors[bhajan.theme]
                           } : undefined}
                         >
                           {bhajan.theme}
@@ -545,7 +576,7 @@ function Dashboard({ user, userRole }) {
                     <div className="meta-group">
                       <span className="meta-label">Language</span>
                       <div className="meta-values">
-                        <span className="meta-badge">{bhajan.language}</span>
+                        <span className="pill pill-lang">{bhajan.language}</span>
                       </div>
                     </div>
                   )}
@@ -554,7 +585,7 @@ function Dashboard({ user, userRole }) {
                       <span className="meta-label">Raga</span>
                       <div className="meta-values">
                         {toList(displayRaga(bhajan)).map(r => (
-                          <span key={r} className="meta-badge">{r}</span>
+                          <span key={r} className="pill pill-raga">{r}</span>
                         ))}
                       </div>
                     </div>
@@ -564,7 +595,7 @@ function Dashboard({ user, userRole }) {
                       <span className="meta-label">Tala</span>
                       <div className="meta-values">
                         {toList(displayTala(bhajan)).map(t => (
-                          <span key={`tala-${t}`} className="meta-badge">{t}</span>
+                          <span key={`tala-${t}`} className="pill pill-tala">{t}</span>
                         ))}
                       </div>
                     </div>
@@ -572,14 +603,14 @@ function Dashboard({ user, userRole }) {
                   <div className="meta-group">
                     <span className="meta-label">© Status</span>
                     <div className="meta-values">
-                      <span className={`status-badge copyright-${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
-                        {bhajan.copyright_status === 'approved' ? '© COPYRIGHTED' : '© COPYRIGHT PENDING'}
+                      <span className={`pill pill-copyright ${bhajan.copyright_status === 'approved' ? 'approved' : 'pending'}`}>
+                        {bhajan.copyright_status === 'approved' ? '© Copyrighted' : '© Pending'}
                       </span>
                     </div>
                   </div>
                 </div>
                 {bhajan.duration_minutes && (
-                  <p className="bhajan-duration">⏱️ {bhajan.duration_minutes} min</p>
+                  <p className="bhajan-duration"><span className="material-symbols-outlined">schedule</span> {bhajan.duration_minutes} min</p>
                 )}
                 {bhajan.updated_at && (
                   <p className="bhajan-updated">
@@ -591,28 +622,16 @@ function Dashboard({ user, userRole }) {
                 )}
               </div>
               <div className="bhajan-actions">
-                <button
-                  onClick={() => setSelectedBhajan(bhajan)}
-                  className="btn-secondary"
-                >
+                <button onClick={() => setSelectedBhajan(bhajan)} className="row-action">
                   View Details
                 </button>
-                <button
-                  onClick={() => setSelectedLyrics(bhajan)}
-                  className="btn-secondary"
-                >
+                <button onClick={() => setSelectedLyrics(bhajan)} className="row-action">
                   View Lyrics
                 </button>
-                <button
-                  onClick={() => navigate(`/bhajan/${bhajan.id}/edit`)}
-                  className="btn-edit"
-                >
+                <button onClick={() => navigate(`/bhajan/${bhajan.id}/edit`)} className="row-action">
                   Edit
                 </button>
-                <button
-                  onClick={() => handleDelete(bhajan.id)}
-                  className="btn-delete"
-                >
+                <button onClick={() => handleDelete(bhajan.id)} className="row-action row-action-danger">
                   Delete
                 </button>
               </div>

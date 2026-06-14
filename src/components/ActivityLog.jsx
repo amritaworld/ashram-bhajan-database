@@ -32,10 +32,10 @@ function ActivityLog({ bhajanId }) {
 
   const getActionIcon = (action) => {
     switch(action) {
-      case 'created': return '✨'
-      case 'updated': return '✏️'
-      case 'deleted': return '🗑️'
-      default: return '📝'
+      case 'created': return 'auto_awesome'
+      case 'updated': return 'edit'
+      case 'deleted': return 'delete'
+      default: return 'description'
     }
   }
 
@@ -61,7 +61,7 @@ function ActivityLog({ bhajanId }) {
           {activities.map(activity => (
             <div key={activity.id} className="activity-item">
               <div className="activity-icon" style={{ color: getActionColor(activity.action) }}>
-                {getActionIcon(activity.action)}
+                <span className="material-symbols-outlined">{getActionIcon(activity.action)}</span>
               </div>
               <div className="activity-content">
                 <div className="activity-header">

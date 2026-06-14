@@ -101,7 +101,10 @@ function AudioPlayer({ fileName, fileUrl, onDelete }) {
       />
 
       <div className="audio-top">
-        <span className="audio-filename" title={fileName}>🎵 {fileName}</span>
+        <span className="audio-filename" title={fileName}>
+          <span className="material-symbols-outlined">music_note</span>
+          {fileName}
+        </span>
         {onDelete && (
           <button
             type="button"
@@ -110,7 +113,7 @@ function AudioPlayer({ fileName, fileUrl, onDelete }) {
             title="Delete audio file"
             aria-label="Delete audio file"
           >
-            🗑
+            <span className="material-symbols-outlined">delete</span>
           </button>
         )}
       </div>

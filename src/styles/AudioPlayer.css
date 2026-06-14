@@ -29,9 +29,18 @@
   color: #e5e7eb;
   font-size: 0.9rem;
   font-weight: 500;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-filename .material-symbols-outlined {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  color: var(--accent, #d6a84f);
 }
 
 .audio-delete-btn {

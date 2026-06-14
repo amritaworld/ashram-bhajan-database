@@ -259,7 +259,7 @@ function AudioConvert({ user }) {
                 onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
               />
               <label htmlFor="audio-convert-input" className="convert-label">
-                <span className="convert-icon">🎵</span>
+                <span className="convert-icon material-symbols-outlined">library_music</span>
                 <span className="convert-text">Choose audio files</span>
                 <span className="convert-hint">or drag files here — WMA, WAV, M4A, FLAC, MP3…</span>
               </label>

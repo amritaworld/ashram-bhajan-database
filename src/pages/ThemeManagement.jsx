@@ -199,7 +199,7 @@ function ThemeManagement() {
                   disabled={uploadingThumbnail}
                 />
                 <label htmlFor="theme-thumbnail-input" className="file-upload-btn">
-                  🖼️ {uploadingThumbnail ? 'Uploading...' : (formData.thumbnail_url ? 'Replace image' : 'Choose image')}
+                  <span className="material-symbols-outlined">image</span> {uploadingThumbnail ? 'Uploading...' : (formData.thumbnail_url ? 'Replace image' : 'Choose image')}
                 </label>
               </div>
               {formData.thumbnail_url && (
@@ -222,9 +222,10 @@ function ThemeManagement() {
 
       <div className="themes-section">
         <div className="search-bar">
+          <span className="material-symbols-outlined theme-search-icon">search</span>
           <input
             type="text"
-            placeholder="🔍 Search themes..."
+            placeholder="Search themes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="theme-search-input"
@@ -238,7 +239,7 @@ function ThemeManagement() {
 
         {filteredThemes.length === 0 ? (
           <div className="no-results">
-            <p>{searchQuery ? '❌ No themes found' : '📭 No themes yet'}</p>
+            <p>{searchQuery ? 'No themes found' : 'No themes yet'}</p>
           </div>
         ) : (
           <div className="themes-grid">
@@ -261,7 +262,7 @@ function ThemeManagement() {
                     />
                   </div>
                   <div className="theme-bhajan-count">
-                    🎵 {themeBhajanCounts[theme.name] || 0} bhajan{themeBhajanCounts[theme.name] !== 1 ? 's' : ''}
+                    <span className="material-symbols-outlined">music_note</span> {themeBhajanCounts[theme.name] || 0} bhajan{themeBhajanCounts[theme.name] !== 1 ? 's' : ''}
                   </div>
                   <div className="theme-actions">
                     <button 

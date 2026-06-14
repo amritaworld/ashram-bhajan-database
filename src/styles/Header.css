@@ -1,6 +1,6 @@
 .header {
-  background-color: #111114;
-  border-bottom: 1px solid #2a2a30;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
   padding: 1rem 2rem;
   position: sticky;
   top: 0;
@@ -18,7 +18,8 @@
 .logo h1 {
   font-size: 1.5rem;
   margin: 0;
-  color: #d6a84f;
+  color: var(--accent);
+  letter-spacing: 0;
 }
 
 .nav {
@@ -30,23 +31,23 @@
 .nav-link {
   background: none;
   border: none;
-  color: #a7a7a7;
+  color: var(--text-muted);
   cursor: pointer;
   font-weight: 600;
   font-size: 0.875rem;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
   transition: all 200ms ease;
   font-family: inherit;
 }
 
 .nav-link:hover {
-  color: #d6a84f;
+  color: var(--accent);
   background-color: rgba(214, 168, 79, 0.1);
 }
 
 .nav-link.active {
-  color: #d6a84f;
+  color: var(--accent);
   background-color: rgba(214, 168, 79, 0.14);
 }
 
@@ -71,7 +72,7 @@
 .hamburger span {
   width: 25px;
   height: 3px;
-  background-color: #d6a84f;
+  background-color: var(--accent);
   border-radius: 2px;
   transition: all 200ms ease;
 }
@@ -87,8 +88,8 @@
     top: 70px;
     left: 0;
     right: 0;
-    background-color: #111114;
-    border-bottom: 1px solid #2a2a30;
+    background-color: var(--surface);
+    border-bottom: 1px solid var(--border);
     flex-direction: column;
     gap: 0;
     display: none;

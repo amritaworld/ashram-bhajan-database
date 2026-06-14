@@ -268,12 +268,21 @@
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  background: #111114;
+  gap: 0.75rem;
+  background: var(--surface, #111114);
   padding: 1rem 1.5rem;
-  border: 1px solid #2a2a30;
+  border: 1px solid var(--border, #2a2a30);
   border-radius: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.theme-search-icon {
+  color: #9a9a9a;
+  font-size: 1.25rem;
+}
+
+.search-bar:focus-within .theme-search-icon {
+  color: var(--accent, #d6a84f);
 }
 
 .theme-search-input {

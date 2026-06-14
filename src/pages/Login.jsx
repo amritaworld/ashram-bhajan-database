@@ -42,7 +42,7 @@ function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1>Bhajans Portal</h1>
+        <h1>Bhajanamritam</h1>
         <form onSubmit={handleLogin}>
           {error && <div style={{ color: '#ff5c5c', fontSize: '0.875rem', marginBottom: '1rem' }}>{error}</div>}
 

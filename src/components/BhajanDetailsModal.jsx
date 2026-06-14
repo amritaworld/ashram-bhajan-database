@@ -205,19 +205,21 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
 
           {bhajan.notes && (
             <div className="notes-section">
-              <h3>📝 Notes</h3>
+              <h3><span className="material-symbols-outlined">description</span> Notes</h3>
               <p className="notes-text">{bhajan.notes}</p>
             </div>
           )}
 
           {tuneGroup.length > 1 && (
             <div className="tune-group-section">
-              <h3>🎵 Tune Group (Linked Versions)</h3>
+              <h3><span className="material-symbols-outlined">music_note</span> Tune Group (Linked Versions)</h3>
               <div className="tune-group-list">
                 {tuneGroup.map((b) => (
                   <div key={b.id} className={`tune-group-item ${b.id === bhajanId ? 'current' : ''}`}>
                     <span className="tune-group-indicator">
-                      {b.id === bhajan.original_bhajan_id ? '🔵' : b.original_bhajan_id ? '🔗' : '🔵'}
+                      <span className="material-symbols-outlined">
+                        {b.original_bhajan_id ? 'link' : 'trip_origin'}
+                      </span>
                     </span>
                     <span className="tune-group-name">{b.name}</span>
                     <span className="tune-group-language">({b.language})</span>
@@ -253,7 +255,7 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
 
           {audioFiles.length > 0 && (
             <div className="audio-section">
-              <h3>🎵 Audio Recordings</h3>
+              <h3><span className="material-symbols-outlined">music_note</span> Audio Recordings</h3>
               {audioFiles.map((file, idx) => (
                 <AudioPlayer 
                   key={idx}

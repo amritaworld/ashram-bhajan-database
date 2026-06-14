@@ -308,7 +308,7 @@ function ContributorManagement() {
                   disabled={uploadingPhoto}
                 />
                 <label htmlFor="photo-input" className="file-upload-btn">
-                  📷 {uploadingPhoto ? 'Uploading...' : 'Choose photo'}
+                  <span className="material-symbols-outlined">photo_camera</span> {uploadingPhoto ? 'Uploading...' : 'Choose photo'}
                 </label>
               </div>
             </div>
@@ -339,7 +339,7 @@ function ContributorManagement() {
                   disabled={uploadingSignature}
                 />
                 <label htmlFor="signature-input" className="file-upload-btn">
-                  ✍️ {uploadingSignature ? 'Uploading...' : 'Choose signature'}
+                  <span className="material-symbols-outlined">draw</span> {uploadingSignature ? 'Uploading...' : 'Choose signature'}
                 </label>
               </div>
             </div>
@@ -395,13 +395,13 @@ function ContributorManagement() {
               {contributor.photo_url ? (
                 <img src={contributor.photo_url} alt={contributor.name} className="contributor-photo" />
               ) : (
-                <div className="contributor-photo contributor-photo-placeholder">👤</div>
+                <div className="contributor-photo contributor-photo-placeholder"><span className="material-symbols-outlined">person</span></div>
               )}
               <div className="contributor-info">
                 <div className="contributor-info-main">
                   <h3>{contributor.name}</h3>
-                  {contributor.email && <p>📧 {contributor.email}</p>}
-                  {contributor.phone && <p>📱 {contributor.phone}</p>}
+                  {contributor.email && <p><span className="material-symbols-outlined">mail</span> {contributor.email}</p>}
+                  {contributor.phone && <p><span className="material-symbols-outlined">call</span> {contributor.phone}</p>}
                   {contributor.id_proof_type && (
                     <p className="id-proof">ID: {contributor.id_proof_type} - {contributor.id_proof_number}</p>
                   )}

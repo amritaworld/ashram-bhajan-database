@@ -208,7 +208,7 @@ I hereby declare that:
             onClick={handlePrint}
             className="noc-btn-print"
           >
-            🖨️ Print / Save as PDF
+            <span className="material-symbols-outlined">print</span> Print / Save as PDF
           </button>
           <button onClick={onClose} className="noc-btn-close">
             Close

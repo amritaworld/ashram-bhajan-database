@@ -417,7 +417,7 @@ function BulkImport({ user }) {
               onChange={(e) => processFiles(Array.from(e.target.files || []))}
             />
             <label htmlFor="folder-input" className="folder-label">
-              <span className="folder-icon">📁</span>
+              <span className="folder-icon material-symbols-outlined">folder_open</span>
               <span className="folder-text">Choose a folder of .docx files</span>
               <span className="folder-hint">or drag files/folders here, or click below for individual files</span>
             </label>
@@ -454,7 +454,7 @@ function BulkImport({ user }) {
               </label>
               {(counts.possible || 0) > 0 && (
                 <p className="import-options-hint">
-                  🟡 <strong>{counts.possible} possible duplicate{counts.possible === 1 ? '' : 's'}</strong> —
+                  <span className="material-symbols-outlined" style={{ color: '#ffc107', verticalAlign: 'middle' }}>help</span> <strong>{counts.possible} possible duplicate{counts.possible === 1 ? '' : 's'}</strong> —
                   the first stanza matches an existing bhajan but the rest may differ. These are
                   left out by default; tick “import anyway” on a row to include it as a flagged draft.
                 </p>
@@ -573,11 +573,14 @@ function BulkImport({ user }) {
 }
 
 function statusIcon(status) {
-  if (status === 'ok') return '✅'
-  if (status === 'warn') return '⚠️'
-  if (status === 'possible') return '🟡'
-  if (status === 'duplicate') return '⏭️'
-  return '❌'
+  const map = {
+    ok:        { icon: 'check_circle', color: '#4caf50' },
+    warn:      { icon: 'warning',      color: '#ffc107' },
+    possible:  { icon: 'help',         color: '#ffc107' },
+    duplicate: { icon: 'skip_next',    color: '#9ca3af' },
+  }
+  const { icon, color } = map[status] || { icon: 'cancel', color: '#ef4444' }
+  return <span className="material-symbols-outlined" style={{ color }}>{icon}</span>
 }
 
 export default BulkImport

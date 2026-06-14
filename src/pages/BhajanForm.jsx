@@ -766,7 +766,8 @@ function BhajanForm() {
                      cursor: generatingMeaning ? 'wait' : 'pointer', border: '1px solid #c08a2b',
                      borderRadius: '6px', background: generatingMeaning ? '#f5edd9' : 'transparent', color: '#c08a2b' }}
           >
-            {generatingMeaning ? '✨ Generating…' : '✨ Generate meanings from lyrics'}
+            <span className="material-symbols-outlined">auto_awesome</span>
+            {generatingMeaning ? ' Generating…' : ' Generate meanings from lyrics'}
           </button>
         </div>
         <div className="form-group">
@@ -811,12 +812,12 @@ function BhajanForm() {
               disabled={uploadingAudio}
             />
             <label htmlFor="audio-upload" className="audio-upload-label">
-              <span className="upload-icon">🎵</span>
+              <span className="upload-icon material-symbols-outlined">upload_file</span>
               <span className="upload-text">
                 {uploadingAudio ? 'Uploading...' : 'Click to upload audio'}
               </span>
               <span className="upload-hint">MP3, WAV, M4A — you can select multiple files</span>
-            <span className="upload-hint" style={{ marginTop: '0.4rem', color: '#d6a84f' }}>💡 Tip: convert/compress to MP3 (~128 kbps) before uploading to save storage</span>
+            <span className="upload-hint" style={{ marginTop: '0.4rem', color: '#d6a84f' }}><span className="material-symbols-outlined" style={{ fontSize: '1em' }}>lightbulb</span> Tip: convert/compress to MP3 (~128 kbps) before uploading to save storage</span>
             </label>
           </div>
         </div>
@@ -878,7 +879,7 @@ function BhajanForm() {
               disabled={!id}
               title={id ? 'Generate No Objection Certificate' : 'Save the bhajan first to generate an NOC'}
             >
-              📄 Generate No Objection Certificate (NOC)
+              <span className="material-symbols-outlined">description</span> Generate No Objection Certificate (NOC)
             </button>
             {!id && (
               <p style={{ color: '#9ca3af', fontSize: '0.8rem', marginTop: '0.5rem', textAlign: 'center' }}>
@@ -901,10 +902,10 @@ function BhajanForm() {
       <div className="floating-save-bar">
         {id && (
           <span className={`autosave-status autosave-${autoSaveStatus}`}>
-            {autoSaveStatus === 'pending' && '✎ Unsaved changes…'}
-            {autoSaveStatus === 'saving' && '⟳ Saving…'}
-            {autoSaveStatus === 'saved' && '✓ All changes saved'}
-            {autoSaveStatus === 'error' && '⚠ Couldn’t save — check connection'}
+            {autoSaveStatus === 'pending' && <><span className="material-symbols-outlined">edit</span> Unsaved changes…</>}
+            {autoSaveStatus === 'saving' && <><span className="material-symbols-outlined">sync</span> Saving…</>}
+            {autoSaveStatus === 'saved' && <><span className="material-symbols-outlined">check_circle</span> All changes saved</>}
+            {autoSaveStatus === 'error' && <><span className="material-symbols-outlined">error</span> Couldn’t save — check connection</>}
           </span>
         )}
         <button onClick={handleSave} disabled={loading || uploadingAudio} className="btn-primary floating-save-btn" type="button">

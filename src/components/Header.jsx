@@ -24,7 +24,7 @@ function Header({ userRole }) {
     <header className="header">
       <div className="header-content">
         <div className="logo">
-          <h1>Bhajans Portal</h1>
+          <h1>Bhajanamritam</h1>
         </div>
 
         <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
