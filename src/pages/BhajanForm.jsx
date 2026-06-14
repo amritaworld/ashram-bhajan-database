@@ -77,6 +77,8 @@ function BhajanForm({ userRole }) {
   // Stays null until an existing bhajan finishes loading (guards against the
   // empty initial form overwriting the record).
   const lastSavedRef = useRef(null)
+  // Ensures at most one "updated" activity-log entry per editing session.
+  const loggedThisSessionRef = useRef(false)
   const [user, setUser] = useState(null)
   const [bhajanId, setBhajanId] = useState('')
   const [themes, setThemes] = useState([])
@@ -555,6 +557,16 @@ function BhajanForm({ userRole }) {
 
       // This state is now persisted — update the autosave baseline.
       lastSavedRef.current = snapAtSave
+
+      // Activity log: record creation once, and at most one "updated" entry per
+      // editing session (so frequent autosaves don't spam the log).
+      if (!id) {
+        logActivity(savedId, 'created', `Created “${name}”`)
+        loggedThisSessionRef.current = true
+      } else if (!loggedThisSessionRef.current) {
+        logActivity(savedId, 'updated', `Updated “${name}”`)
+        loggedThisSessionRef.current = true
+      }
 
       if (silent) {
         setAutoSaveStatus('saved')

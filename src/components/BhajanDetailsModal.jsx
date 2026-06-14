@@ -6,14 +6,23 @@ import Spinner from './Spinner'
 import { fetchTuneGroup } from '../utils/tuneGroups'
 import '../styles/BhajanDetailsModal.css'
 
-// Show both systems when present (e.g. "Carnatic: Mohanam · Hindustani: Bhupali"),
+// Show each system (Carnatic / Hindustani) on its own line for clear separation,
 // falling back to whichever exists, then the legacy single field, then "-".
-function systemsText(carnatic, hindustani, legacy) {
+function SystemsValue({ carnatic, hindustani, legacy }) {
   const parts = []
-  if (carnatic) parts.push(`Carnatic: ${carnatic}`)
-  if (hindustani) parts.push(`Hindustani: ${hindustani}`)
-  if (parts.length) return parts.join('  ·  ')
-  return legacy || '-'
+  if (carnatic) parts.push(['Carnatic', carnatic])
+  if (hindustani) parts.push(['Hindustani', hindustani])
+  if (!parts.length) return <p>{legacy || '-'}</p>
+  return (
+    <p className="systems-value">
+      {parts.map(([sys, val]) => (
+        <span className="system-line" key={sys}>
+          <span className="system-label">{sys}</span>
+          {val}
+        </span>
+      ))}
+    </p>
+  )
 }
 
 function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
@@ -185,11 +194,11 @@ function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
             </div>
             <div className="detail-item">
               <label>Raga</label>
-              <p>{systemsText(bhajan.raga_carnatic, bhajan.raga_hindustani, bhajan.raga)}</p>
+              <SystemsValue carnatic={bhajan.raga_carnatic} hindustani={bhajan.raga_hindustani} legacy={bhajan.raga} />
             </div>
             <div className="detail-item">
               <label>Tala</label>
-              <p>{systemsText(bhajan.tala_carnatic, bhajan.tala_hindustani, bhajan.tala)}</p>
+              <SystemsValue carnatic={bhajan.tala_carnatic} hindustani={bhajan.tala_hindustani} legacy={bhajan.tala} />
             </div>
             <div className="detail-item">
               <label>Duration</label>
@@ -235,23 +244,23 @@ function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
           )}
 
           {(contributors.lyricists.length > 0 || contributors.composers.length > 0 || contributors.singers.length > 0) && (
-            <div className="contributors-section">
+            <div className="details-grid">
               {contributors.lyricists.length > 0 && (
-                <div className="contributor-line">
-                  <span className="contributor-role">Lyricists</span>
-                  <span className="contributor-names">{contributors.lyricists.map(c => c.name).join(', ')}</span>
+                <div className="detail-item">
+                  <label>Lyricists</label>
+                  <p>{contributors.lyricists.map(c => c.name).join(', ')}</p>
                 </div>
               )}
               {contributors.composers.length > 0 && (
-                <div className="contributor-line">
-                  <span className="contributor-role">Composers</span>
-                  <span className="contributor-names">{contributors.composers.map(c => c.name).join(', ')}</span>
+                <div className="detail-item">
+                  <label>Composers</label>
+                  <p>{contributors.composers.map(c => c.name).join(', ')}</p>
                 </div>
               )}
               {contributors.singers.length > 0 && (
-                <div className="contributor-line">
-                  <span className="contributor-role">Singers</span>
-                  <span className="contributor-names">{contributors.singers.map(c => c.name).join(', ')}</span>
+                <div className="detail-item">
+                  <label>Singers</label>
+                  <p>{contributors.singers.map(c => c.name).join(', ')}</p>
                 </div>
               )}
             </div>

@@ -242,45 +242,6 @@ h1, h2, h3, h4, h5, h6 {
   gap: 1.5rem;
 }
 
-/* Contributors section (Lyricists / Composers / Singers) — laid out like every
-   other section: plain labelled fields, no boxed cards. */
-.contributors-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.contributor-group {
-  background: none;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-}
-
-/* Match the standard field label (.form-group label) so it reads the same as
-   "Carnatic" / "Hindustani" etc. */
-.contributor-group-title {
-  display: block;
-  color: #d6a84f;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0 0 0.5rem 0;
-}
-
-.contributor-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.contributor-item .btn-delete {
-  flex-shrink: 0;
-}
-
 .form-actions {
   display: flex;
   gap: 1rem;
@@ -990,35 +951,6 @@ h1, h2, h3, h4, h5, h6 {
   border-radius: 0.25rem;
 }
 
-.contributors-section {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: #141820;
-  border-left: 3px solid #d6a84f;
-  border-radius: 0.5rem;
-}
-
-.contributors-section h3 {
-  color: #d6a84f;
-  margin-bottom: 0.75rem;
-  font-size: 0.95rem;
-}
-
-.contributors-section ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.contributors-section li {
-  color: #e5e7eb;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #222936;
-}
-
-.contributors-section li:last-child {
-  border-bottom: none;
-}
 
 /* Fix Audio Player and Add Button */
 .btn-add-contrib {

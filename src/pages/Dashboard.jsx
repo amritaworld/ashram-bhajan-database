@@ -725,6 +725,7 @@ function Dashboard({ user, userRole }) {
       <LyricsModal
         bhajan={selectedLyrics}
         onClose={() => setSelectedLyrics(null)}
+        userRole={userRole}
       />
     </div>
   )

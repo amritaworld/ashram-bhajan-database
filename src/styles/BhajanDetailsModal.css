@@ -108,6 +108,28 @@
   color: #f5f5f5;
   margin: 0;
   font-size: 0.95rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Raga/Tala: each system on its own line with a small muted label */
+.systems-value {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.system-line {
+  display: block;
+}
+
+.system-label {
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: #9ca3af;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .contributors-section {
