@@ -43,7 +43,28 @@
   color: var(--accent, #d6a84f);
 }
 
-.audio-delete-btn {
+/* Version pill (V1, V2, …) next to the audio file name */
+.audio-version {
+  flex-shrink: 0;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent, #d6a84f);
+  background: rgba(214, 168, 79, 0.14);
+  border: 1px solid rgba(214, 168, 79, 0.35);
+}
+
+.audio-top-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.audio-delete-btn,
+.audio-download-btn {
   background: transparent;
   border: none;
   color: #6b7280;
@@ -62,6 +83,16 @@
 .audio-delete-btn:hover {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.12);
+}
+
+.audio-download-btn:hover:not(:disabled) {
+  color: var(--accent, #d6a84f);
+  background: rgba(214, 168, 79, 0.12);
+}
+
+.audio-download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Seek bar + time labels */

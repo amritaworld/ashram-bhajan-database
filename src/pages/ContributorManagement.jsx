@@ -22,10 +22,38 @@ function ContributorManagement() {
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [uploadingSignature, setUploadingSignature] = useState(false)
+  // contributor name (lowercased) -> count of distinct bhajans they contributed to
+  const [bhajanCounts, setBhajanCounts] = useState({})
 
   useEffect(() => {
     fetchContributors()
+    fetchBhajanCounts()
   }, [])
+
+  // Count distinct bhajans each contributor appears on, as lyricist/composer
+  // (bhajan_writers) or singer (bhajan_singers). Matched by name.
+  const fetchBhajanCounts = async () => {
+    try {
+      const [{ data: writers }, { data: singers }] = await Promise.all([
+        supabase.from('bhajan_writers').select('bhajan_id, writer_name'),
+        supabase.from('bhajan_singers').select('bhajan_id, singer_name'),
+      ])
+      const map = {}
+      const add = (name, bhajanId) => {
+        if (!name || !bhajanId) return
+        const key = name.trim().toLowerCase()
+        if (!map[key]) map[key] = new Set()
+        map[key].add(bhajanId)
+      }
+      ;(writers || []).forEach(w => add(w.writer_name, w.bhajan_id))
+      ;(singers || []).forEach(s => add(s.singer_name, s.bhajan_id))
+      const counts = {}
+      Object.keys(map).forEach(k => { counts[k] = map[k].size })
+      setBhajanCounts(counts)
+    } catch (err) {
+      console.error('Error loading contributor bhajan counts:', err)
+    }
+  }
 
   const fetchContributors = async () => {
     setLoading(true)
@@ -395,40 +423,44 @@ function ContributorManagement() {
         <div className="contributors-grid">
           {filteredContributors.map(contributor => (
             <div key={contributor.id} className="contributor-card">
-              {contributor.photo_url ? (
-                <img src={contributor.photo_url} alt={contributor.name} className="contributor-photo" />
-              ) : (
-                <div className="contributor-photo contributor-photo-placeholder"><span className="material-symbols-outlined">person</span></div>
-              )}
-              <div className="contributor-info">
-                <div className="contributor-info-main">
-                  <h3>{contributor.name}</h3>
-                  {contributor.email && <p><span className="material-symbols-outlined">mail</span> {contributor.email}</p>}
-                  {contributor.phone && <p><span className="material-symbols-outlined">call</span> {contributor.phone}</p>}
-                  {contributor.id_proof_type && (
-                    <p className="id-proof">ID: {contributor.id_proof_type} - {contributor.id_proof_number}</p>
-                  )}
-                  {contributor.signature_url && (
-                    <div className="contributor-signature-mini">
-                      <span>Signature</span>
-                      <img src={contributor.signature_url} alt={`${contributor.name} signature`} />
-                    </div>
-                  )}
+              <div className="contributor-top">
+                {contributor.photo_url ? (
+                  <img src={contributor.photo_url} alt={contributor.name} className="contributor-avatar" />
+                ) : (
+                  <div className="contributor-avatar contributor-avatar-placeholder">
+                    <span className="material-symbols-outlined">person</span>
+                  </div>
+                )}
+                <div className="contributor-name-wrap">
+                  <h3 className="contributor-name">{contributor.name}</h3>
+                  <span className="contributor-bhajan-count">
+                    <span className="material-symbols-outlined">music_note</span>
+                    {bhajanCounts[(contributor.name || '').trim().toLowerCase()] || 0} bhajan{(bhajanCounts[(contributor.name || '').trim().toLowerCase()] || 0) === 1 ? '' : 's'}
+                  </span>
                 </div>
+              </div>
+
+              <div className="contributor-details">
+                {contributor.email && <p><span className="material-symbols-outlined">mail</span> {contributor.email}</p>}
+                {contributor.phone && <p><span className="material-symbols-outlined">call</span> {contributor.phone}</p>}
+                {contributor.id_proof_type && (
+                  <p className="id-proof">ID: {contributor.id_proof_type} - {contributor.id_proof_number}</p>
+                )}
+                {contributor.signature_url && (
+                  <div className="contributor-signature-mini">
+                    <span>Signature</span>
+                    <img src={contributor.signature_url} alt={`${contributor.name} signature`} />
+                  </div>
+                )}
+              </div>
+
               <div className="contributor-actions">
-                <button
-                  onClick={() => handleEdit(contributor)}
-                  className="btn-edit"
-                >
+                <button onClick={() => handleEdit(contributor)} className="btn-edit">
                   Edit
                 </button>
-                <button
-                  onClick={() => handleDelete(contributor.id, contributor.name)}
-                  className="btn-delete"
-                >
+                <button onClick={() => handleDelete(contributor.id, contributor.name)} className="btn-delete">
                   Delete
                 </button>
-                </div>
               </div>
             </div>
           ))}

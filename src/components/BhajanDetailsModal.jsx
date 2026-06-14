@@ -16,7 +16,7 @@ function systemsText(carnatic, hindustani, legacy) {
   return legacy || '-'
 }
 
-function BhajanDetailsModal({ bhajanId, onClose }) {
+function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
   const [bhajan, setBhajan] = useState(null)
   const [contributors, setContributors] = useState({ lyricists: [], composers: [], singers: [] })
   const [audioFiles, setAudioFiles] = useState([])
@@ -132,20 +132,24 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
       if (error) throw error
 
       if (data && data.length > 0) {
-        const filesWithUrls = data.map(file => {
-          const { data: urlData } = supabase.storage
-            .from('bhajan-audio')
-            .getPublicUrl(`${bhajan_id}/${file.name}`)
+        const filesWithUrls = data
+          // Oldest upload first so version numbers follow upload order.
+          .map(file => ({ file, ts: parseInt((file.name.match(/^(\d+)-/) || [])[1], 10) || 0 }))
+          .sort((a, b) => a.ts - b.ts)
+          .map(({ file }) => {
+            const { data: urlData } = supabase.storage
+              .from('bhajan-audio')
+              .getPublicUrl(`${bhajan_id}/${file.name}`)
 
-          const displayName = file.name.replace(/^\d+-/, '')
+            const displayName = file.name.replace(/^\d+-/, '')
 
-          return {
-            name: file.name,
-            displayName: displayName,
-            url: urlData.publicUrl,
-            created_at: file.created_at
-          }
-        })
+            return {
+              name: file.name,
+              displayName: displayName,
+              url: urlData.publicUrl,
+              created_at: file.created_at
+            }
+          })
         setAudioFiles(filesWithUrls)
       } else {
         setAudioFiles([])
@@ -257,10 +261,12 @@ function BhajanDetailsModal({ bhajanId, onClose }) {
             <div className="audio-section">
               <h3><span className="material-symbols-outlined">music_note</span> Audio Recordings</h3>
               {audioFiles.map((file, idx) => (
-                <AudioPlayer 
+                <AudioPlayer
                   key={idx}
                   fileName={file.displayName}
                   fileUrl={file.url}
+                  allowDownload={userRole === 'admin'}
+                  version={idx + 1}
                 />
               ))}
             </div>

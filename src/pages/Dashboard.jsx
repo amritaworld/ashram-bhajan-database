@@ -711,6 +711,7 @@ function Dashboard({ user, userRole }) {
         <BhajanDetailsModal
           bhajanId={selectedBhajan.id}
           onClose={() => setSelectedBhajan(null)}
+          userRole={userRole}
         />
       )}
       <LyricsModal

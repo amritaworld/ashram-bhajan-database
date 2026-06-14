@@ -1,12 +1,40 @@
 import { useState, useRef } from 'react'
 import '../styles/AudioPlayer.css'
 
-function AudioPlayer({ fileName, fileUrl, onDelete }) {
+function AudioPlayer({ fileName, fileUrl, onDelete, allowDownload = false, version }) {
   const audioRef = useRef(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [error, setError] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  // Fetch the file as a blob and save it with its real name. Going via a blob
+  // (rather than a plain <a download>) guarantees a download even though the
+  // storage URL is on a different origin.
+  const handleDownload = async () => {
+    if (!fileUrl) return
+    setDownloading(true)
+    try {
+      const res = await fetch(fileUrl)
+      if (!res.ok) throw new Error(`Download failed (${res.status})`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName || 'audio'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Audio download error:', err)
+      // Fallback: open in a new tab so the user can still save it manually.
+      window.open(fileUrl, '_blank', 'noopener')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const handlePlayPause = async () => {
     const audio = audioRef.current
@@ -103,19 +131,34 @@ function AudioPlayer({ fileName, fileUrl, onDelete }) {
       <div className="audio-top">
         <span className="audio-filename" title={fileName}>
           <span className="material-symbols-outlined">music_note</span>
+          {version ? <span className="audio-version" title={`Version ${version}`}>V{version}</span> : null}
           {fileName}
         </span>
-        {onDelete && (
-          <button
-            type="button"
-            className="audio-delete-btn"
-            onClick={onDelete}
-            title="Delete audio file"
-            aria-label="Delete audio file"
-          >
-            <span className="material-symbols-outlined">delete</span>
-          </button>
-        )}
+        <span className="audio-top-actions">
+          {allowDownload && (
+            <button
+              type="button"
+              className="audio-download-btn"
+              onClick={handleDownload}
+              disabled={downloading || error}
+              title="Download audio file"
+              aria-label="Download audio file"
+            >
+              <span className="material-symbols-outlined">{downloading ? 'hourglass_top' : 'download'}</span>
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className="audio-delete-btn"
+              onClick={onDelete}
+              title="Delete audio file"
+              aria-label="Delete audio file"
+            >
+              <span className="material-symbols-outlined">delete</span>
+            </button>
+          )}
+        </span>
       </div>
 
       <div className="audio-seek">

@@ -12,6 +12,9 @@ import { malayalamToIAST } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
+// Escape a user string so it can be used literally inside a RegExp.
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
 // Serialise every saved field into a stable string. Used to detect whether the
 // form has changed since the last save, so autosave only writes on real edits.
 const makeSnapshot = (v) => JSON.stringify({
@@ -27,7 +30,7 @@ const makeSnapshot = (v) => JSON.stringify({
   lyricists: v.lyricists, composers: v.composers, singers: v.singers,
 })
 
-function BhajanForm() {
+function BhajanForm({ userRole }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const [name, setName] = useState('')
@@ -48,6 +51,11 @@ function BhajanForm() {
   // When true, the English (IAST) field was hand-edited/loaded, so we don't
   // auto-overwrite it as Malayalam changes. The "Sync" button resets this.
   const [englishManual, setEnglishManual] = useState(false)
+  // Find & replace within the Malayalam lyrics
+  const [showFindReplace, setShowFindReplace] = useState(false)
+  const [findText, setFindText] = useState('')
+  const [replaceText, setReplaceText] = useState('')
+  const [matchCase, setMatchCase] = useState(false)
   const [meaning_malayalam, setMeaningMalayalam] = useState('')
   const [meaning_english, setMeaningEnglish] = useState('')
   const [generatingMeaning, setGeneratingMeaning] = useState(false)
@@ -331,18 +339,23 @@ function BhajanForm() {
       if (error) throw error
 
       if (data && data.length > 0) {
-        const filesWithUrls = data.map(file => {
-          const path = `${folderId}/${file.name}`
-          const { data: urlData } = supabase.storage
-            .from('bhajan-audio')
-            .getPublicUrl(path)
-          return {
-            name: file.name,
-            displayName: file.name.replace(/^\d+-/, ''),
-            url: urlData.publicUrl,
-            path
-          }
-        })
+        const filesWithUrls = data
+          // Oldest upload first → version numbers follow upload order. The
+          // filename is prefixed with Date.now() at upload time.
+          .map(file => ({ file, ts: parseInt((file.name.match(/^(\d+)-/) || [])[1], 10) || 0 }))
+          .sort((a, b) => a.ts - b.ts)
+          .map(({ file }) => {
+            const path = `${folderId}/${file.name}`
+            const { data: urlData } = supabase.storage
+              .from('bhajan-audio')
+              .getPublicUrl(path)
+            return {
+              name: file.name,
+              displayName: file.name.replace(/^\d+-/, ''),
+              url: urlData.publicUrl,
+              path
+            }
+          })
         setAudioFiles(filesWithUrls)
       } else {
         setAudioFiles([])
@@ -579,6 +592,26 @@ function BhajanForm() {
     }
   }
 
+  // Live count of matches for the current "find" term in the Malayalam lyrics.
+  const lyricsMatchCount = (() => {
+    if (!findText) return 0
+    try {
+      const re = new RegExp(escapeRegExp(findText), matchCase ? 'g' : 'gi')
+      return (lyrics_malayalam.match(re) || []).length
+    } catch {
+      return 0
+    }
+  })()
+
+  const replaceAllInLyrics = () => {
+    if (!findText) return
+    const re = new RegExp(escapeRegExp(findText), matchCase ? 'g' : 'gi')
+    const next = lyrics_malayalam.replace(re, replaceText)
+    setLyricsMalayalam(next)
+    // Keep the English (IAST) field in step unless it was hand-edited.
+    if (!englishManual) setLyricsEnglish(malayalamToIAST(next))
+  }
+
   return (
     <div className="form-container" onClick={handleBackdropClick}>
       <div className="form-card">
@@ -716,7 +749,56 @@ function BhajanForm() {
           />
         </div>
 
-        <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Lyrics</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2rem', marginBottom: '1rem' }}>
+          <h2 style={{ margin: 0 }}>Lyrics</h2>
+          <button
+            type="button"
+            onClick={() => setShowFindReplace(v => !v)}
+            title="Find and replace text in the Malayalam lyrics"
+            style={{ fontSize: '0.78rem', fontWeight: 500, padding: '0.2rem 0.6rem', cursor: 'pointer',
+                     border: '1px solid #c08a2b', borderRadius: '6px',
+                     background: showFindReplace ? '#f5edd9' : 'transparent', color: '#c08a2b',
+                     display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '1em' }}>find_replace</span>
+            Find &amp; Replace
+          </button>
+        </div>
+
+        {showFindReplace && (
+          <div className="find-replace-bar">
+            <input
+              className="fr-input"
+              type="text"
+              value={findText}
+              onChange={(e) => setFindText(e.target.value)}
+              placeholder="Find…"
+            />
+            <input
+              className="fr-input"
+              type="text"
+              value={replaceText}
+              onChange={(e) => setReplaceText(e.target.value)}
+              placeholder="Replace with…"
+            />
+            <label className="fr-case">
+              <input type="checkbox" checked={matchCase} onChange={(e) => setMatchCase(e.target.checked)} />
+              Match case
+            </label>
+            <span className="fr-count">
+              {findText ? `${lyricsMatchCount} match${lyricsMatchCount === 1 ? '' : 'es'}` : ''}
+            </span>
+            <button
+              type="button"
+              className="btn-primary fr-btn"
+              onClick={replaceAllInLyrics}
+              disabled={!findText || lyricsMatchCount === 0}
+            >
+              Replace all
+            </button>
+          </div>
+        )}
+
         <div className="form-group">
           <label>Malayalam</label>
           <textarea
@@ -825,12 +907,14 @@ function BhajanForm() {
 
         {audioFiles.length > 0 && (
           <div className="audio-files-list">
-            {audioFiles.map((file) => (
+            {audioFiles.map((file, index) => (
               <AudioPlayer
                 key={file.path}
                 fileName={file.displayName}
                 fileUrl={file.url}
                 onDelete={() => handleDeleteAudio(file.path)}
+                allowDownload={userRole === 'admin'}
+                version={index + 1}
               />
             ))}
           </div>
