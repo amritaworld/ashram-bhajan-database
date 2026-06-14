@@ -175,6 +175,10 @@
   letter-spacing: 0.5px;
 }
 
+.audio-section .version-tabs {
+  margin-bottom: 1rem;
+}
+
 .audio-item {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid #222936;

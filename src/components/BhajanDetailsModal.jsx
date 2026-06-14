@@ -29,6 +29,7 @@ function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
   const [bhajan, setBhajan] = useState(null)
   const [contributors, setContributors] = useState({ lyricists: [], composers: [], singers: [] })
   const [audioFiles, setAudioFiles] = useState([])
+  const [activeAudio, setActiveAudio] = useState(0)
   const [tuneGroup, setTuneGroup] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -266,20 +267,36 @@ function BhajanDetailsModal({ bhajanId, onClose, userRole }) {
             </div>
           )}
 
-          {audioFiles.length > 0 && (
-            <div className="audio-section">
-              <h3><span className="material-symbols-outlined">music_note</span> Audio Recordings</h3>
-              {audioFiles.map((file, idx) => (
+          {audioFiles.length > 0 && (() => {
+            const idx = Math.min(activeAudio, audioFiles.length - 1)
+            const file = audioFiles[idx]
+            return (
+              <div className="audio-section">
+                <h3><span className="material-symbols-outlined">music_note</span> Audio Recordings</h3>
+                {audioFiles.length > 1 && (
+                  <div className="version-tabs">
+                    {audioFiles.map((f, i) => (
+                      <button
+                        type="button"
+                        key={i}
+                        className={`version-tab ${i === idx ? 'active' : ''}`}
+                        onClick={() => setActiveAudio(i)}
+                      >
+                        V{i + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <AudioPlayer
-                  key={idx}
+                  key={file.name}
                   fileName={file.displayName}
                   fileUrl={file.url}
                   allowDownload={userRole === 'admin'}
                   version={idx + 1}
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            )
+          })()}
 
           <ActivityLog bhajanId={bhajanId} />
         </div>
