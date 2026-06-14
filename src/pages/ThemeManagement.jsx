@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
+import { showAlert, showConfirm } from '../components/Dialog'
 import '../styles/ThemeManagement.css'
 
 function ThemeManagement() {
@@ -48,14 +49,14 @@ function ThemeManagement() {
       }
       setThemeBhajanCounts(counts)
     } catch (err) {
-      alert('Error loading themes: ' + err.message)
+      showAlert('Error loading themes: ' + err.message)
     }
     setLoading(false)
   }
 
   const handleSave = async () => {
     if (!formData.name) {
-      alert('Theme name is required')
+      showAlert('Theme name is required')
       return
     }
 
@@ -82,9 +83,9 @@ function ThemeManagement() {
       setEditingId(null)
       setSearchQuery('')
       await loadThemes()
-      alert(isUpdate ? 'Theme updated!' : 'Theme created!')
+      showAlert(isUpdate ? 'Theme updated!' : 'Theme created!')
     } catch (err) {
-      alert('Error: ' + err.message)
+      showAlert('Error: ' + err.message)
     }
     setLoading(false)
   }
@@ -111,13 +112,14 @@ function ThemeManagement() {
 
       setFormData(prev => ({ ...prev, thumbnail_url: publicUrlData.publicUrl }))
     } catch (err) {
-      alert('Error uploading thumbnail: ' + err.message)
+      showAlert('Error uploading thumbnail: ' + err.message)
     } finally {
       setUploadingThumbnail(false)
     }
   }
 
-  const handleDeleteThumbnail = () => {
+  const handleDeleteThumbnail = async () => {
+    if (!(await showConfirm('Remove this image?', { title: 'Remove image', confirmText: 'Remove', danger: true }))) return
     setFormData(prev => ({ ...prev, thumbnail_url: '' }))
   }
 
@@ -127,13 +129,13 @@ function ThemeManagement() {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this theme?')) return
+    if (!(await showConfirm('Delete this theme?', { title: 'Delete theme', confirmText: 'Delete', danger: true }))) return
     try {
       await supabase.from('themes').delete().eq('id', id)
       await loadThemes()
-      alert('Theme deleted!')
+      showAlert('Theme deleted!')
     } catch (err) {
-      alert('Error: ' + err.message)
+      showAlert('Error: ' + err.message)
     }
   }
 

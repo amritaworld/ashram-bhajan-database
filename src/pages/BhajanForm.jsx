@@ -7,6 +7,7 @@ import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
 import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
+import { showAlert, showConfirm } from '../components/Dialog'
 import { malayalamToIAST } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
@@ -357,7 +358,7 @@ function BhajanForm() {
     if (!files.length) return
 
     if (!name) {
-      alert('Please enter bhajan name first')
+      showAlert('Please enter bhajan name first')
       return
     }
 
@@ -379,36 +380,36 @@ function BhajanForm() {
       e.target.value = ''
       await loadAudioFiles(tempBhajanId)
     } catch (err) {
-      alert('Error uploading audio: ' + err.message)
+      showAlert('Error uploading audio: ' + err.message)
     } finally {
       setUploadingAudio(false)
     }
   }
 
   const handleDeleteAudio = async (filePath) => {
-    if (!window.confirm('Delete this audio file?')) return
+    if (!(await showConfirm('Delete this audio file?', { title: 'Delete audio', confirmText: 'Delete', danger: true }))) return
     try {
       const { error } = await supabase.storage.from('bhajan-audio').remove([filePath])
       if (error) throw error
       setAudioFiles(prev => prev.filter(f => f.path !== filePath))
     } catch (err) {
-      alert('Error deleting audio: ' + err.message)
+      showAlert('Error deleting audio: ' + err.message)
     }
   }
 
   const regenerateMeanings = async () => {
     if (!lyrics_malayalam.trim()) {
-      alert('Add Malayalam lyrics first — the meaning is generated from them.')
+      showAlert('Add Malayalam lyrics first — the meaning is generated from them.')
       return
     }
-    if ((meaning_malayalam.trim() || meaning_english.trim()) &&
-        !window.confirm('This will replace the current Malayalam and English meanings with AI-generated ones. Continue?')) {
-      return
+    if (meaning_malayalam.trim() || meaning_english.trim()) {
+      const ok = await showConfirm('This will replace the current Malayalam and English meanings with AI-generated ones. Continue?', { title: 'Replace meanings', confirmText: 'Replace' })
+      if (!ok) return
     }
     setGeneratingMeaning(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { alert('Please log in again.'); return }
+      if (!session) { showAlert('Please log in again.'); return }
       const res = await fetch('/api/generate-meaning', {
         method: 'POST',
         headers: {
@@ -422,7 +423,7 @@ function BhajanForm() {
       setMeaningMalayalam(data.malayalam_meaning || '')
       setMeaningEnglish(data.english_meaning || '')
     } catch (err) {
-      alert('Could not generate meaning: ' + err.message)
+      showAlert('Could not generate meaning: ' + err.message)
     } finally {
       setGeneratingMeaning(false)
     }
@@ -430,7 +431,7 @@ function BhajanForm() {
 
   const saveBhajan = async ({ silent = false } = {}) => {
     if (!name) {
-      if (!silent) alert('Enter bhajan name')
+      if (!silent) showAlert('Enter bhajan name')
       return false
     }
 
@@ -556,7 +557,7 @@ function BhajanForm() {
         setAutoSaveStatus('error')
         console.error('Autosave failed:', err)
       } else {
-        alert('Error: ' + err.message)
+        showAlert('Error: ' + err.message)
       }
       return false
     } finally {
@@ -572,8 +573,8 @@ function BhajanForm() {
     leaveForm()
   }
 
-  const leaveForm = () => {
-    if (window.confirm('Leave this form and go back to the dashboard?')) {
+  const leaveForm = async () => {
+    if (await showConfirm('Leave this form and go back to the dashboard?', { title: 'Leave form', confirmText: 'Leave', cancelText: 'Stay' })) {
       navigate('/dashboard')
     }
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
 import Spinner from '../components/Spinner'
+import { showAlert, showConfirm } from '../components/Dialog'
 import '../styles/Admin.css'
 
 function UserManagement({ user }) {
@@ -59,23 +60,23 @@ function UserManagement({ user }) {
     e.preventDefault()
 
     if (!formData.email) {
-      alert('Please fill in all required fields')
+      showAlert('Please fill in all required fields')
       return
     }
 
     // Username is required (it's what people log in with) and must be unique.
     const username = (formData.username || '').trim().toLowerCase()
     if (!username) {
-      alert('Please enter a username (this is what the user logs in with)')
+      showAlert('Please enter a username (this is what the user logs in with)')
       return
     }
     if (!/^[a-z0-9._-]{3,}$/.test(username)) {
-      alert('Username must be at least 3 characters: only letters, numbers, dot, underscore or hyphen')
+      showAlert('Username must be at least 3 characters: only letters, numbers, dot, underscore or hyphen')
       return
     }
     const taken = users.find(u => (u.username || '').toLowerCase() === username && u.id !== editingId)
     if (taken) {
-      alert(`The username "${username}" is already taken`)
+      showAlert(`The username "${username}" is already taken`)
       return
     }
 
@@ -95,7 +96,7 @@ function UserManagement({ user }) {
         // secure server endpoint, which uses the service_role key).
         if (formData.newPassword) {
           if (formData.newPassword.length < 8) {
-            alert('New password must be at least 8 characters')
+            showAlert('New password must be at least 8 characters')
             setLoading(false)
             return
           }
@@ -110,13 +111,13 @@ function UserManagement({ user }) {
           })
           const out = await res.json().catch(() => ({}))
           if (!res.ok) throw new Error(out.error || 'Password reset failed')
-          alert('User updated and password reset. Tell the user their new password — they are not emailed.')
+          showAlert('User updated and password reset. Tell the user their new password — they are not emailed.')
         } else {
-          alert('User updated successfully!')
+          showAlert('User updated successfully!')
         }
       } else {
         if (!formData.password) {
-          alert('Please enter password for new user')
+          showAlert('Please enter password for new user')
           setLoading(false)
           return
         }
@@ -140,13 +141,13 @@ function UserManagement({ user }) {
         })
         const out = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(out.error || 'User could not be created')
-        alert('User created successfully!')
+        showAlert('User created successfully!')
       }
 
       resetForm()
       await fetchUsers()
     } catch (err) {
-      alert('Error: ' + err.message)
+      showAlert('Error: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -167,11 +168,11 @@ function UserManagement({ user }) {
 
   const handleDeleteUser = async (userId, userEmail) => {
     if (userId === user.id) {
-      alert('You cannot delete your own account')
+      showAlert('You cannot delete your own account')
       return
     }
 
-    if (window.confirm(`Delete user ${userEmail}? This removes their login completely.`)) {
+    if (await showConfirm(`Delete user ${userEmail}? This removes their login completely.`, { title: 'Delete user', confirmText: 'Delete', danger: true })) {
       try {
         // Delete via the secure server endpoint (service key, admin-only) so
         // BOTH the login and the profile row are removed. The old browser
@@ -188,9 +189,9 @@ function UserManagement({ user }) {
         const out = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(out.error || 'Delete failed')
         await fetchUsers()
-        alert('User deleted successfully')
+        showAlert('User deleted successfully')
       } catch (err) {
-        alert('Error deleting user: ' + err.message)
+        showAlert('Error deleting user: ' + err.message)
       }
     }
   }

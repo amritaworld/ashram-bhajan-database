@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../config/supabase'
 import Spinner from '../components/Spinner'
+import { showAlert, showConfirm } from '../components/Dialog'
 import '../styles/ContributorManagement.css'
 
 function ContributorManagement() {
@@ -52,7 +53,7 @@ function ContributorManagement() {
     if (!file) return
 
     if (!formData.name.trim()) {
-      alert('Please enter contributor name first')
+      showAlert('Please enter contributor name first')
       return
     }
 
@@ -76,15 +77,16 @@ function ContributorManagement() {
         signature_url: publicUrlData.publicUrl
       }))
 
-      alert('Signature uploaded successfully!')
+      showAlert('Signature uploaded successfully!')
     } catch (err) {
-      alert('Error uploading signature: ' + err.message)
+      showAlert('Error uploading signature: ' + err.message)
     } finally {
       setUploadingSignature(false)
     }
   }
 
-  const handleDeleteSignature = () => {
+  const handleDeleteSignature = async () => {
+    if (!(await showConfirm('Remove this signature?', { title: 'Remove signature', confirmText: 'Remove', danger: true }))) return
     setFormData(prev => ({
       ...prev,
       signature_url: ''
@@ -96,7 +98,7 @@ function ContributorManagement() {
     if (!file) return
 
     if (!formData.name.trim()) {
-      alert('Please enter contributor name first')
+      showAlert('Please enter contributor name first')
       return
     }
 
@@ -120,15 +122,16 @@ function ContributorManagement() {
         photo_url: publicUrlData.publicUrl
       }))
 
-      alert('Photo uploaded successfully!')
+      showAlert('Photo uploaded successfully!')
     } catch (err) {
-      alert('Error uploading photo: ' + err.message)
+      showAlert('Error uploading photo: ' + err.message)
     } finally {
       setUploadingPhoto(false)
     }
   }
 
-  const handleDeletePhoto = () => {
+  const handleDeletePhoto = async () => {
+    if (!(await showConfirm('Remove this photo?', { title: 'Remove photo', confirmText: 'Remove', danger: true }))) return
     setFormData(prev => ({
       ...prev,
       photo_url: ''
@@ -154,7 +157,7 @@ function ContributorManagement() {
     e.preventDefault()
 
     if (!formData.name.trim()) {
-      alert('Contributor name is required')
+      showAlert('Contributor name is required')
       return
     }
 
@@ -166,19 +169,19 @@ function ContributorManagement() {
           .update(formData)
           .eq('id', editingId)
         if (error) throw error
-        alert('Contributor updated successfully!')
+        showAlert('Contributor updated successfully!')
       } else {
         const { error } = await supabase
           .from('contributors')
           .insert([formData])
         if (error) throw error
-        alert('Contributor created successfully!')
+        showAlert('Contributor created successfully!')
       }
       
       resetForm()
       await fetchContributors()
     } catch (err) {
-      alert('Error: ' + err.message)
+      showAlert('Error: ' + err.message)
     }
     setLoading(false)
   }
@@ -190,13 +193,13 @@ function ContributorManagement() {
   }
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`Delete contributor "${name}"?`)) {
+    if (await showConfirm(`Delete contributor "${name}"?`, { title: 'Delete contributor', confirmText: 'Delete', danger: true })) {
       try {
         await supabase.from('contributors').delete().eq('id', id)
-        alert('Contributor deleted')
+        showAlert('Contributor deleted')
         await fetchContributors()
       } catch (err) {
-        alert('Error: ' + err.message)
+        showAlert('Error: ' + err.message)
       }
     }
   }

@@ -12,6 +12,7 @@ import ThemeManagement from './pages/ThemeManagement'
 import ApiUsage from './pages/ApiUsage'
 import ContributorManagement from './pages/ContributorManagement'
 import Spinner from './components/Spinner'
+import { DialogHost } from './components/Dialog'
 import './App.css'
 
 function App() {
@@ -75,6 +76,7 @@ function App() {
           )}
         </Routes>
       </main>
+      <DialogHost />
     </Router>
   )
 }

@@ -4,6 +4,7 @@ import { supabase } from '../config/supabase'
 import BhajanDetailsModal from '../components/BhajanDetailsModal'
 import LyricsModal from '../components/LyricsModal'
 import Spinner from '../components/Spinner'
+import { showAlert, showConfirm } from '../components/Dialog'
 import '../styles/Dashboard.css'
 
 // Listing rule: show Carnatic; if Carnatic is empty, show Hindustani; then the
@@ -45,6 +46,7 @@ function Dashboard({ user, userRole }) {
   const [filterCopyright, setFilterCopyright] = useState('')
   const [filterContributor, setFilterContributor] = useState('')
   const [filterRoles, setFilterRoles] = useState([])
+  const [filterAudio, setFilterAudio] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 20
   const [stats, setStats] = useState({
@@ -62,6 +64,8 @@ function Dashboard({ user, userRole }) {
   // bhajan id -> [{ name, role }] for the contributor filter
   const [contributorMap, setContributorMap] = useState({})
   const [contributorNames, setContributorNames] = useState([])
+  // Set of bhajan_id slugs that have at least one audio file (for the audio filter)
+  const [audioBhajanIds, setAudioBhajanIds] = useState(() => new Set())
   const [selectedBhajan, setSelectedBhajan] = useState(null)
   const [selectedLyrics, setSelectedLyrics] = useState(null)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -72,7 +76,28 @@ function Dashboard({ user, userRole }) {
     loadThemeColors()
     loadUsers()
     loadContributorData()
+    loadAudioAvailability()
   }, [])
+
+  // Which bhajans have audio: each bhajan's audio lives in a storage folder
+  // named after its bhajan_id slug, so the root listing of the bucket gives us
+  // exactly the set of bhajan_ids that currently have at least one file.
+  const loadAudioAvailability = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('bhajan-audio')
+        .list('', { limit: 5000 })
+      if (error) throw error
+      const ids = new Set(
+        (data || [])
+          .filter(entry => entry.name && entry.name !== '.emptyFolderPlaceholder')
+          .map(entry => entry.name)
+      )
+      setAudioBhajanIds(ids)
+    } catch (err) {
+      console.error('Error loading audio availability:', err)
+    }
+  }
 
   const loadThemeColors = async () => {
     const { data } = await supabase.from('themes').select('name, color')
@@ -122,7 +147,7 @@ function Dashboard({ user, userRole }) {
 
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, filterContributor, filterRoles, contributorMap, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, filterContributor, filterRoles, filterAudio, audioBhajanIds, contributorMap, bhajans])
 
   // Keep selection in sync with what's visible — drop ids that filtered out
   useEffect(() => {
@@ -227,6 +252,14 @@ function Dashboard({ user, userRole }) {
       )
     }
 
+    // Audio filter — bhajans that do / don't have an audio file in storage.
+    if (filterAudio) {
+      filtered = filtered.filter(b => {
+        const hasAudio = audioBhajanIds.has(b.bhajan_id)
+        return filterAudio === 'available' ? hasAudio : !hasAudio
+      })
+    }
+
     // Contributor filter: keep bhajans that have a matching contributor.
     // - a name picked  → that person must be on the bhajan
     // - role(s) picked → in one of the picked roles (else any role)
@@ -252,10 +285,10 @@ function Dashboard({ user, userRole }) {
   }
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this bhajan?')) {
+    if (await showConfirm('Delete this bhajan? This cannot be undone.', { title: 'Delete bhajan', confirmText: 'Delete', danger: true })) {
       await supabase.from('bhajans').delete().eq('id', id)
       await loadBhajans()
-      alert('Bhajan deleted')
+      showAlert('Bhajan deleted')
     }
   }
 
@@ -278,17 +311,17 @@ function Dashboard({ user, userRole }) {
   const handleBulkDelete = async () => {
     const ids = [...selectedIds]
     if (ids.length === 0) return
-    if (!window.confirm(`Delete ${ids.length} selected bhajan${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return
+    if (!(await showConfirm(`Delete ${ids.length} selected bhajan${ids.length > 1 ? 's' : ''}? This cannot be undone.`, { title: 'Delete selected', confirmText: 'Delete', danger: true }))) return
 
     const { error } = await supabase.from('bhajans').delete().in('id', ids)
     if (error) {
-      alert('Error deleting bhajans: ' + error.message)
+      showAlert('Error deleting bhajans: ' + error.message)
       return
     }
     setSelectedIds(new Set())
     await loadBhajans()
     await loadStats()
-    alert(`Deleted ${ids.length} bhajan${ids.length > 1 ? 's' : ''}`)
+    showAlert(`Deleted ${ids.length} bhajan${ids.length > 1 ? 's' : ''}`)
   }
 
   const totalPages = Math.max(1, Math.ceil(filteredBhajans.length / PAGE_SIZE))
@@ -446,7 +479,20 @@ function Dashboard({ user, userRole }) {
             </select>
           </div>
 
-          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus || filterCopyright || filterContributor || filterRoles.length > 0) && (
+          <div className="filter-field">
+            <label className="filter-label">Audio</label>
+            <select
+              value={filterAudio}
+              onChange={(e) => setFilterAudio(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Audio</option>
+              <option value="available">Audio available</option>
+              <option value="unavailable">No audio</option>
+            </select>
+          </div>
+
+          {(searchTerm || filterTheme || filterRaga || filterLanguage || filterStatus || filterCopyright || filterContributor || filterRoles.length > 0 || filterAudio) && (
             <button
               onClick={() => {
                 setSearchTerm('')
@@ -457,6 +503,7 @@ function Dashboard({ user, userRole }) {
                 setFilterCopyright('')
                 setFilterContributor('')
                 setFilterRoles([])
+                setFilterAudio('')
               }}
               className="btn-secondary"
             >

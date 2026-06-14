@@ -5,6 +5,7 @@ import { parseDocx, generateBhajanId } from '../utils/parseDocx'
 import { enrichBhajan } from '../utils/excelEnrich'
 import { firstStanza, firstLineKey, stanzaSimilarity } from '../utils/iast'
 import Spinner from '../components/Spinner'
+import { showAlert } from '../components/Dialog'
 import '../styles/BulkImport.css'
 
 const CHUNK_SIZE = 50
@@ -97,7 +98,7 @@ function BulkImport({ user }) {
       (f) => f.name.toLowerCase().endsWith('.docx') && !f.name.startsWith('~$')
     )
     if (!picked.length) {
-      alert('No .docx files found.')
+      showAlert('No .docx files found.')
       return
     }
     await doImport(picked)
@@ -174,7 +175,7 @@ function BulkImport({ user }) {
         dbIndex.get(key).push({ name: b.name || '(untitled)', stanza })
       }
     } catch (err) {
-      alert('Could not load existing bhajans: ' + err.message)
+      showAlert('Could not load existing bhajans: ' + err.message)
       setPhase('idle')
       return
     }
