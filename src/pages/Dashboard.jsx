@@ -85,10 +85,11 @@ function Dashboard({ user, userRole }) {
 
   // Who edited each bhajan — map user id to a display name for the listing.
   const loadUsers = async () => {
-    const { data } = await supabase.from('users').select('id, username, full_name')
+    const { data } = await supabase.from('users').select('id, username, display_name, full_name')
     if (data) {
       const map = {}
-      data.forEach(u => { map[u.id] = u.full_name || u.username || '' })
+      // Prefer the editable Display Name; fall back to legacy full_name, then username.
+      data.forEach(u => { map[u.id] = u.display_name || u.full_name || u.username || '' })
       setUserMap(map)
     }
   }
