@@ -655,6 +655,14 @@ function Dashboard({ user, userRole }) {
                       </div>
                     </div>
                   )}
+                  {bhajan.year_of_recording && (
+                    <div className="meta-group">
+                      <span className="meta-label">Year</span>
+                      <div className="meta-values">
+                        <span className="pill pill-year">{bhajan.year_of_recording}</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="meta-group">
                     <span className="meta-label">© Status</span>
                     <div className="meta-values">

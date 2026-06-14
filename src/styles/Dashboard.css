@@ -453,6 +453,12 @@
   color: #7dd3fc;
 }
 
+/* Year — muted slate/neutral */
+.pill-year {
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+}
+
 /* Copyright — soft green when approved, soft amber when pending */
 .pill-copyright.approved {
   background: rgba(34, 197, 94, 0.12);
