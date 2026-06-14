@@ -5,6 +5,7 @@ import AudioPlayer from '../components/AudioPlayer'
 import TagInput from '../components/TagInput'
 import NOCGenerator from '../components/NOCGenerator'
 import ContributorMultiSelect from '../components/ContributorMultiSelect'
+import AutoTextarea from '../components/AutoTextarea'
 import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
 import { showAlert, showConfirm } from '../components/Dialog'
@@ -582,7 +583,9 @@ function BhajanForm({ userRole }) {
 
   // Click on the backdrop (outside the form card) → confirm, then leave.
   const handleBackdropClick = (e) => {
-    if (e.target !== e.currentTarget) return
+    // Leave only for clicks on the backdrop around the form — never when the
+    // click is on the form card, the floating Save/Cancel bar, or a dialog.
+    if (e.target.closest('.form-card, .floating-save-bar, .dialog-overlay')) return
     leaveForm()
   }
 
@@ -801,7 +804,7 @@ function BhajanForm({ userRole }) {
 
         <div className="form-group">
           <label>Malayalam</label>
-          <textarea
+          <AutoTextarea
             value={lyrics_malayalam}
             onChange={(e) => {
               const mal = e.target.value
@@ -809,7 +812,7 @@ function BhajanForm({ userRole }) {
               // Auto-fill the English (IAST) field until it's hand-edited.
               if (!englishManual) setLyricsEnglish(malayalamToIAST(mal))
             }}
-            rows="9"
+            minHeight="9rem"
             placeholder="Malayalam lyrics"
           />
         </div>
@@ -827,10 +830,10 @@ function BhajanForm({ userRole }) {
               ⟳ Sync from Malayalam
             </button>
           </label>
-          <textarea
+          <AutoTextarea
             value={lyrics_english}
             onChange={(e) => { setLyricsEnglish(e.target.value); setEnglishManual(true) }}
-            rows="9"
+            minHeight="9rem"
             placeholder="Auto-filled from Malayalam (IAST) — edit to override"
           />
           {englishManual && lyrics_malayalam.trim() && (
@@ -855,23 +858,23 @@ function BhajanForm({ userRole }) {
         </div>
         <div className="form-group">
           <label>Malayalam</label>
-          <textarea value={meaning_malayalam} onChange={(e) => setMeaningMalayalam(e.target.value)} rows="4" placeholder="Malayalam meaning" />
+          <AutoTextarea value={meaning_malayalam} onChange={(e) => setMeaningMalayalam(e.target.value)} minHeight="5rem" placeholder="Malayalam meaning" />
         </div>
 
         <div className="form-group">
           <label>English</label>
-          <textarea value={meaning_english} onChange={(e) => setMeaningEnglish(e.target.value)} rows="4" placeholder="English meaning/translation" />
+          <AutoTextarea value={meaning_english} onChange={(e) => setMeaningEnglish(e.target.value)} minHeight="5rem" placeholder="English meaning/translation" />
         </div>
 
         <h2 style={{ marginTop: '2rem', marginBottom: '1rem' }}>Contributors</h2>
-        <div className="contributors-section">
+        <div className="form-row">
           {[
             { title: 'Lyricists', items: lyricists, setItems: setLyricists, singular: 'Lyricist' },
             { title: 'Composers', items: composers, setItems: setComposers, singular: 'Composer' },
             { title: 'Singers', items: singers, setItems: setSingers, singular: 'Singer' }
           ].map(({ title, items, setItems, singular }) => (
-            <div key={title} className="contributor-group">
-              <h3 className="contributor-group-title">{title}</h3>
+            <div key={title} className="form-group">
+              <label>{title}</label>
               <ContributorMultiSelect
                 value={items}
                 contributors={contributors}

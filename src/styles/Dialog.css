@@ -58,7 +58,7 @@
 
 .dialog-primary {
   background: linear-gradient(135deg, var(--accent, #d6a84f) 0%, var(--accent-2, #e8bd62) 100%);
-  color: #0b0b0d;
+  color: #0b0d11;
 }
 
 .dialog-primary:hover {

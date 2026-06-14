@@ -2,7 +2,7 @@
 .audio-player-card {
   width: 100%;
   background: #121214;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 16px;
   padding: 18px 20px;
   display: flex;
@@ -110,7 +110,7 @@
   border-radius: 2px;
   outline: none;
   cursor: pointer;
-  background: #2a2a30;
+  background: #222936;
 }
 
 .audio-seek-bar::-webkit-slider-thumb {
@@ -194,18 +194,18 @@
   height: 54px;
   border-radius: 50%;
   background: linear-gradient(135deg, #d6a84f 0%, #e8bd62 100%);
-  color: #0b0b0d;
+  color: #0b0d11;
   box-shadow: 0 4px 14px rgba(214, 168, 79, 0.3);
 }
 
 .audio-btn-play:hover:not(:disabled) {
-  color: #0b0b0d;
+  color: #0b0d11;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(214, 168, 79, 0.45);
 }
 
 .audio-btn-play:disabled {
-  background: #2a2a30;
+  background: #222936;
   color: #6b7280;
   box-shadow: none;
 }

@@ -343,11 +343,6 @@ function Dashboard({ user, userRole }) {
 
   return (
     <div className="dashboard">
-      <div className="dashboard-header">
-        <h1>Ashram Bhajanamritam</h1>
-        <p>Manage and organize bhajans</p>
-      </div>
-
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon">

@@ -14,7 +14,11 @@ const CHILLU = {
 }
 
 function normalizeChillus(line) {
-  return line.replace(/[ൺ-ൿ]/g, (c) => CHILLU[c] || c)
+  return line
+    // Older "au" length mark (ൗ, U+0D57) isn't in Sanscript's map and leaks
+    // through untransliterated — normalize it to the standard au matra (ൌ).
+    .replace(/ൗ/g, 'ൌ')
+    .replace(/[ൺ-ൿ]/g, (c) => CHILLU[c] || c)
 }
 
 /**

@@ -5,8 +5,8 @@
 }
 
 .convert-card {
-  background: #111114;
-  border: 1px solid #2a2a30;
+  background: #141820;
+  border: 1px solid #222936;
   border-radius: 0.75rem;
   padding: 2rem;
 }
@@ -38,8 +38,8 @@
 
 .convert-banner code {
   display: inline-block;
-  background: #0b0b0d;
-  border: 1px solid #2a2a30;
+  background: #0b0d11;
+  border: 1px solid #222936;
   border-radius: 0.3rem;
   padding: 0.05rem 0.4rem;
   margin: 0 0.3rem;
@@ -77,9 +77,9 @@
 }
 
 .bitrate-select select {
-  background: #0b0b0d;
+  background: #0b0d11;
   color: #e5e7eb;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.4rem;
   padding: 0.35rem 0.5rem;
 }
@@ -161,7 +161,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 2rem 1rem;
-  border: 2px dashed #2a2a30;
+  border: 2px dashed #222936;
   border-radius: 0.75rem;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -216,7 +216,7 @@
 .convert-table-wrap {
   max-height: 460px;
   overflow: auto;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.5rem;
 }
 
@@ -229,11 +229,11 @@
 .convert-table thead th {
   position: sticky;
   top: 0;
-  background: #0b0b0d;
+  background: #0b0d11;
   color: #d6a84f;
   text-align: left;
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #2a2a30;
+  border-bottom: 1px solid #222936;
   font-weight: 600;
   z-index: 1;
 }
@@ -272,7 +272,7 @@
 .mini-btn {
   background: #1c1c22;
   color: #e5e7eb;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.35rem;
   padding: 0.25rem 0.55rem;
   font-size: 0.8rem;
@@ -298,9 +298,9 @@
 .bhajan-picker input {
   width: 100%;
   max-width: 420px;
-  background: #0b0b0d;
+  background: #0b0d11;
   color: #e5e7eb;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.4rem;
   padding: 0.45rem 0.6rem;
 }
@@ -324,13 +324,13 @@
   font-size: 0.85rem;
 }
 .picker-option:last-child { border-bottom: 1px solid #1c1c22; }
-.picker-option:hover { background: #1f1f26; }
+.picker-option:hover { background: #161a23; }
 .picker-lang { color: #6b7280; }
 
 /* Buttons (match app) */
 .convert-card .btn-primary {
   background: #d6a84f;
-  color: #111114;
+  color: #141820;
   border: none;
   border-radius: 0.5rem;
   padding: 0.55rem 1.1rem;
@@ -342,7 +342,7 @@
 .convert-card .btn-secondary {
   background: #1c1c22;
   color: #e5e7eb;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.5rem;
   padding: 0.55rem 1.1rem;
   cursor: pointer;

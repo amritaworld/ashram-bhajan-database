@@ -26,20 +26,21 @@
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin: 0 2rem 2rem 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 2rem;
 }
 
+/* Compact horizontal stat card: icon on the left, number + label stacked right */
 .stat-card {
   background: #141820;
   border: 1px solid #222936;
   border-radius: 0.75rem;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  align-items: flex-start;
+  padding: 0.9rem 1.1rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.8rem;
+  align-items: center;
   transition: border-color 200ms ease;
 }
 
@@ -48,37 +49,40 @@
 }
 
 .stat-icon {
-  width: 44px;
-  height: 44px;
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.75rem;
+  border-radius: 0.6rem;
   background: rgba(214, 168, 79, 0.1);
   color: #d6a84f;
 }
 
 .stat-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 19px;
+  height: 19px;
 }
 
 .stat-value {
   margin: 0;
+  grid-column: 2;
   color: #e8bd62;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 /* Eyebrow label — quiet, tracked, muted so the number leads */
 .stat-label {
   margin: 0;
+  grid-column: 2;
   color: #a0a0a0;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
 .search-filter-section {
@@ -164,7 +168,7 @@
 
 .search-clear:hover {
   background: #d6a84f;
-  color: #0b0b0d;
+  color: #0b0d11;
 }
 
 /* Contributor filter row (name + role checkboxes) */

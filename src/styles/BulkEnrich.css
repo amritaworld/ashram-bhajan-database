@@ -5,8 +5,8 @@
 }
 
 .enrich-card {
-  background: #111114;
-  border: 1px solid #2a2a30;
+  background: #141820;
+  border: 1px solid #222936;
   border-radius: 0.75rem;
   padding: 2rem;
 }
@@ -23,8 +23,8 @@
 }
 
 .enrich-intro code {
-  background: #0b0b0d;
-  border: 1px solid #2a2a30;
+  background: #0b0d11;
+  border: 1px solid #222936;
   border-radius: 0.3rem;
   padding: 0.05rem 0.35rem;
   color: #d6a84f;
@@ -48,7 +48,7 @@
   align-items: center;
   gap: 0.4rem;
   padding: 2.5rem 1rem;
-  border: 2px dashed #2a2a30;
+  border: 2px dashed #222936;
   border-radius: 0.75rem;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
@@ -116,7 +116,7 @@
 .enrich-table-wrap {
   max-height: 600px;
   overflow: auto;
-  border: 1px solid #2a2a30;
+  border: 1px solid #222936;
   border-radius: 0.5rem;
   margin-bottom: 1.5rem;
 }
@@ -130,11 +130,11 @@
 .enrich-table thead th {
   position: sticky;
   top: 0;
-  background: #0b0b0d;
+  background: #0b0d11;
   color: #d6a84f;
   text-align: left;
   padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #2a2a30;
+  border-bottom: 1px solid #222936;
   font-weight: 600;
   z-index: 1;
 }
@@ -167,7 +167,7 @@
 }
 
 .confidence-badge {
-  background: #2a2a30;
+  background: #222936;
   padding: 0.2rem 0.5rem;
   border-radius: 0.3rem;
   font-size: 0.75rem;
@@ -293,7 +293,7 @@
 
 .btn-primary {
   background: #d6a84f;
-  color: #0b0b0d;
+  color: #0b0d11;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -306,7 +306,7 @@
 }
 
 .btn-secondary {
-  background: #2a2a30;
+  background: #222936;
   color: #e5e7eb;
   border: 1px solid #3a3a40;
 }
