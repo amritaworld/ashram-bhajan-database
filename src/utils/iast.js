@@ -1,3 +1,47 @@
+import { malayalamToIAST } from './transliterate'
+
+/**
+ * Build a "loose phonetic skeleton" of a string for tolerant search.
+ *
+ * It makes the many ways a Malayalam/Sanskrit phrase can be written all collapse
+ * to one key, so e.g. "ആരാരും കാണാതെ", "ararum kanate", "aararum kaanathe",
+ * "ararum kanade" and "aararum kaanaadhe" all become "ararumkanate".
+ *
+ * Steps: Malayalam script → IAST; strip diacritics; lowercase; fold aspirated
+ * digraphs and voicing/retroflex consonant classes to one base sound; squash
+ * repeated letters (long vowels / doubled consonants); drop everything that
+ * isn't a letter (incl. spaces) so word boundaries don't matter.
+ */
+export function looseSearchKey(text) {
+  if (!text) return ''
+  let s = text
+  // Convert any Malayalam-script runs to IAST first.
+  if (/[ഀ-ൿ]/.test(s)) s = malayalamToIAST(s)
+  // Strip EVERY diacritic via Unicode decomposition — catches ā, ṃ, ṭ, ṇ, ñ,
+  // ś, ṣ and the short-vowel breves (ĕ, ŏ) and under-marks (ḻ, ṟ, l̤) that
+  // Sanscript emits for Malayalam, which a fixed map would miss.
+  s = s.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  s = s
+    .replace(/[^a-z\s]/g, ' ')
+    // aspirated digraphs → base
+    .replace(/kh|gh/g, 'k')
+    .replace(/chh|jh|ch/g, 'c')
+    .replace(/th|dh/g, 't')
+    .replace(/ph|bh/g, 'p')
+    .replace(/sh/g, 's')
+    // voicing / retroflex-dental folding → one base per place of articulation
+    .replace(/[gq]/g, 'k')
+    .replace(/j/g, 'c')
+    .replace(/d/g, 't')
+    .replace(/b/g, 'p')
+    .replace(/w/g, 'v')
+    // squash repeats (long vowels, geminate consonants)
+    .replace(/(.)\1+/g, '$1')
+    // boundary-agnostic
+    .replace(/\s+/g, '')
+  return s
+}
+
 /**
  * Normalize IAST format Sanskrit text to simple English for matching
  * IAST uses diacritical marks: ā ī ū ñ ş ṇ ṭ ḍ ṛ etc.

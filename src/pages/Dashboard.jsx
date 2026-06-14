@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
+import { looseSearchKey } from '../utils/iast'
 import BhajanDetailsModal from '../components/BhajanDetailsModal'
 import LyricsModal from '../components/LyricsModal'
 import Spinner from '../components/Spinner'
@@ -145,9 +146,27 @@ function Dashboard({ user, userRole }) {
     }
   }
 
+  // Precompute a tolerant phonetic search key per bhajan (name + Malayalam +
+  // English/IAST lyrics), so spelling/diacritic/script variants all match.
+  // Built once per bhajans load (transliteration is a bit heavy). Declared
+  // before the effects below because one of them depends on it.
+  const searchIndex = useMemo(() => {
+    const idx = new Map()
+    for (const b of bhajans) {
+      let mal = '', eng = ''
+      try {
+        const ly = typeof b.lyrics === 'string' ? JSON.parse(b.lyrics) : (b.lyrics || {})
+        mal = ly.malayalam || ''
+        eng = ly.english || ''
+      } catch (e) { /* ignore malformed lyrics */ }
+      idx.set(b.id, looseSearchKey([b.name, eng, mal].filter(Boolean).join(' ')))
+    }
+    return idx
+  }, [bhajans])
+
   useEffect(() => {
     filterBhajans()
-  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, filterContributor, filterRoles, filterAudio, audioBhajanIds, contributorMap, bhajans])
+  }, [searchTerm, filterTheme, filterRaga, filterLanguage, filterStatus, filterCopyright, filterContributor, filterRoles, filterAudio, audioBhajanIds, contributorMap, searchIndex, bhajans])
 
   // Keep selection in sync with what's visible — drop ids that filtered out
   useEffect(() => {
@@ -207,23 +226,17 @@ function Dashboard({ user, userRole }) {
 
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase().trim()
+      // Tolerant phonetic key: matches across Malayalam, IAST and loose Latin
+      // spellings (diacritics, aspirates, double letters all folded together).
+      const searchKey = looseSearchKey(searchTerm)
       filtered = filtered.filter(b => {
-        // Search by bhajan name
-        const nameLower = (b.name || '').toLowerCase()
-        if (nameLower.includes(searchLower)) return true
-
-        // Search by first line of Malayalam lyrics
-        try {
-          const lyricsData = typeof b.lyrics === 'string' ? JSON.parse(b.lyrics) : b.lyrics || {}
-          const malayalamLyrics = (lyricsData.malayalam || '').trim()
-          if (malayalamLyrics) {
-            const firstLine = malayalamLyrics.split('\n')[0].toLowerCase()
-            if (firstLine.includes(searchLower)) return true
-          }
-        } catch (e) {
-          // Ignore parse errors
+        // Plain substring on the name (keeps exact partial-name matches)
+        if ((b.name || '').toLowerCase().includes(searchLower)) return true
+        // Phonetic match across name + Malayalam + English/IAST lyrics
+        if (searchKey) {
+          const key = searchIndex.get(b.id) || ''
+          if (key.includes(searchKey)) return true
         }
-
         return false
       })
     }
