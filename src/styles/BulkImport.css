@@ -130,6 +130,15 @@
   color: #f0d9a3;
 }
 
+/* Keep the always-visible picker compact above the preview table */
+.import-picker.compact {
+  margin-bottom: 1.25rem;
+}
+
+.import-picker.compact .folder-label {
+  padding: 1.25rem 1rem;
+}
+
 /* Count chips */
 .import-counts {
   display: flex;

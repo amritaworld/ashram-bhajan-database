@@ -60,6 +60,10 @@ function BulkImport({ user }) {
   const [summary, setSummary] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [skipDuplicates, setSkipDuplicates] = useState(true)
+  // Files are read from disk exactly once, when picked, and cached here as plain
+  // parsed objects. Browser File handles go stale and can't be re-read later, so
+  // adding more files only reads the NEW ones and appends to this list.
+  const [parsedItems, setParsedItems] = useState([])
   // Row indices of "possible duplicates" the user has opted to import anyway.
   const [includePossible, setIncludePossible] = useState(() => new Set())
 
@@ -93,24 +97,69 @@ function BulkImport({ user }) {
     return files
   }
 
-  const processFiles = async (filesToProcess) => {
-    const picked = filesToProcess.filter(
+  // Stable identity for a File so re-picking the same file doesn't duplicate it.
+  const fileKey = (f) => `${f.webkitRelativePath || f.name}|${f.size}|${f.lastModified}`
+
+  const processFiles = async (filesToProcess, { append = false } = {}) => {
+    let picked = filesToProcess.filter(
       (f) => f.name.toLowerCase().endsWith('.docx') && !f.name.startsWith('~$')
     )
     if (!picked.length) {
       showAlert('No .docx files found.')
       return
     }
-    await doImport(picked)
+    // When appending, drop any files already in the list (by name/size/date)
+    // so re-picking the same folder doesn't create duplicate rows.
+    if (append) {
+      const existing = new Set(parsedItems.map((p) => p.key))
+      picked = picked.filter((f) => !existing.has(fileKey(f)))
+      if (!picked.length) {
+        showAlert('Those files are already in the list.')
+        return
+      }
+    }
+
+    // Read the new files from disk ONCE, here. Everything downstream works on
+    // the cached parsed objects, never the original File handles.
+    const freshlyParsed = await parseFiles(picked)
+    const combined = append ? [...parsedItems, ...freshlyParsed] : freshlyParsed
+    if (!append) setIncludePossible(new Set())
+    setParsedItems(combined)
+    await buildRows(combined)
   }
 
-  const handlePick = async (e) => {
+  // Read each File to its parsed { fileName, data, ... } object. File handles
+  // expire after the picker closes, so this must run on freshly-picked files.
+  const parseFiles = async (picked) => {
+    setPhase('parsing')
+    setProgress({ done: 0, total: picked.length })
+    return mapLimit(
+      picked,
+      6,
+      async (file) => {
+        const relPath = file.webkitRelativePath || file.name
+        const isReview = /(^|\/)_REVIEW\//i.test(relPath)
+        const fileDate = new Date(file.lastModified)
+        const dateStr = fileDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        const key = fileKey(file)
+        try {
+          const data = await parseDocx(file)
+          return { key, fileName: file.name, relPath, isReview, data, fileDate: dateStr }
+        } catch (err) {
+          return { key, fileName: file.name, relPath, isReview, parseError: err.message, fileDate: dateStr }
+        }
+      },
+      (done) => setProgress((p) => ({ ...p, done }))
+    )
+  }
+
+  const handlePick = async (e, append = false) => {
     const picked = Array.from(e.target.files || [])
     e.target.value = ''
-    await processFiles(picked)
+    await processFiles(picked, { append })
   }
 
-  const handleDrop = async (e) => {
+  const handleDrop = async (e, append = false) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
@@ -128,35 +177,17 @@ function BulkImport({ user }) {
       .filter(Boolean)
 
     if (directFiles.length > 0) {
-      await processFiles(directFiles)
+      await processFiles(directFiles, { append })
     } else {
       const picked = await collectDocxFiles(items)
-      await processFiles(picked)
+      await processFiles(picked, { append })
     }
   }
 
-  const doImport = async (picked) => {
+  // Build preview rows from already-parsed items (no file reads happen here):
+  // enrich, assign slugs, and run duplicate detection against the DB + batch.
+  const buildRows = async (parsed) => {
     setIsDragging(false)
-    setPhase('parsing')
-    setProgress({ done: 0, total: picked.length })
-
-    const parsed = await mapLimit(
-      picked,
-      6,
-      async (file) => {
-        const relPath = file.webkitRelativePath || file.name
-        const isReview = /(^|\/)_REVIEW\//i.test(relPath)
-        const fileDate = new Date(file.lastModified)
-        const dateStr = fileDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        try {
-          const data = await parseDocx(file)
-          return { fileName: file.name, relPath, isReview, data, fileDate: dateStr }
-        } catch (err) {
-          return { fileName: file.name, relPath, isReview, parseError: err.message, fileDate: dateStr }
-        }
-      },
-      (done) => setProgress((p) => ({ ...p, done }))
-    )
 
     const existingSlugs = new Set()
     // Tier-1 bucket of existing DB bhajans: firstLineKey -> [{ name, stanza }]
@@ -378,8 +409,56 @@ function BulkImport({ user }) {
     setRows([])
     setSummary(null)
     setProgress({ done: 0, total: 0 })
+    setParsedItems([])
+    setIncludePossible(new Set())
     setPhase('idle')
   }
+
+  // The drag-and-drop / file picker. Shown on the idle screen (fresh batch) and
+  // kept visible above the preview table so more folders can be added (append).
+  const renderPicker = (append) => (
+    <div
+      className={`import-picker ${isDragging ? 'dragging' : ''} ${append ? 'compact' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDragging(true)
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => handleDrop(e, append)}
+    >
+      <input
+        id="folder-input"
+        className="folder-input"
+        type="file"
+        webkitdirectory=""
+        multiple
+        onChange={(e) => handlePick(e, append)}
+      />
+      <input
+        id="files-input"
+        className="folder-input"
+        type="file"
+        accept=".docx"
+        multiple
+        onChange={(e) => processFiles(Array.from(e.target.files || []), { append })}
+      />
+      <label htmlFor="folder-input" className="folder-label">
+        <span className="folder-icon material-symbols-outlined">folder_open</span>
+        <span className="folder-text">
+          {append ? 'Add more .docx files' : 'Choose a folder of .docx files'}
+        </span>
+        <span className="folder-hint">
+          {append
+            ? 'drag another folder/files here, or click below — they’ll be added to the list'
+            : 'or drag files/folders here, or click below for individual files'}
+        </span>
+      </label>
+      <label htmlFor="files-input" className="files-label">
+        Select individual .docx files
+      </label>
+    </div>
+  )
 
   return (
     <div className="import-container">
@@ -390,43 +469,7 @@ function BulkImport({ user }) {
           Each file becomes one <strong>draft</strong> bhajan, ready for you to review and publish.
         </p>
 
-        {phase === 'idle' && (
-          <div
-            className={`import-picker ${isDragging ? 'dragging' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              setIsDragging(true)
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-          >
-            <input
-              id="folder-input"
-              className="folder-input"
-              type="file"
-              webkitdirectory
-              multiple
-              onChange={handlePick}
-            />
-            <input
-              id="files-input"
-              className="folder-input"
-              type="file"
-              accept=".docx"
-              multiple
-              onChange={(e) => processFiles(Array.from(e.target.files || []))}
-            />
-            <label htmlFor="folder-input" className="folder-label">
-              <span className="folder-icon material-symbols-outlined">folder_open</span>
-              <span className="folder-text">Choose a folder of .docx files</span>
-              <span className="folder-hint">or drag files/folders here, or click below for individual files</span>
-            </label>
-            <label htmlFor="files-input" className="files-label">
-              Select individual .docx files
-            </label>
-          </div>
-        )}
+        {(phase === 'idle' || phase === 'preview') && renderPicker(phase === 'preview')}
 
         {phase === 'parsing' && (
           <div className="import-progress">
