@@ -17,6 +17,9 @@ dist-ssr
 .env.*
 !.env.example
 
+# One-off audit/export artifacts — not source
+ui-audit-bundle.zip
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
