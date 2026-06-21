@@ -192,6 +192,23 @@ function BhajanForm({ userRole }) {
       .substring(0, 50)
   }
 
+  // Resolve a slug that isn't already taken. bhajan_id has a UNIQUE constraint,
+  // so two bhajans with the same name would otherwise collide on insert. Append
+  // -2, -3, … until free — the same scheme the bulk importer uses.
+  const getUniqueBhajanId = async (base) => {
+    const safeBase = base || 'bhajan'
+    const { data, error } = await supabase
+      .from('bhajans')
+      .select('bhajan_id')
+      .like('bhajan_id', `${safeBase}%`)
+    if (error) throw error
+    const taken = new Set((data || []).map((r) => r.bhajan_id))
+    if (!taken.has(safeBase)) return safeBase
+    let n = 2
+    while (taken.has(`${safeBase}-${n}`)) n++
+    return `${safeBase}-${n}`
+  }
+
   // Snapshot of the current form state (for autosave change-detection).
   const snapshot = () => makeSnapshot({
     name, theme, language, originalBhajanId,
@@ -507,10 +524,11 @@ function BhajanForm({ userRole }) {
         await supabase.from('bhajan_writers').delete().eq('bhajan_id', id)
         await supabase.from('bhajan_singers').delete().eq('bhajan_id', id)
       } else {
+        const uniqueBhajanId = await getUniqueBhajanId(generatedBhajanId)
         const { data, error } = await supabase
           .from('bhajans')
           .insert([{
-            bhajan_id: generatedBhajanId,
+            bhajan_id: uniqueBhajanId,
             name, theme, language, ...ragaTalaFields,
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
             year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
@@ -528,7 +546,7 @@ function BhajanForm({ userRole }) {
         if (error) throw error
         if (!data || data.length === 0) throw new Error('No data returned')
         savedId = data[0].id
-        setBhajanId(generatedBhajanId)
+        setBhajanId(uniqueBhajanId)
       }
 
       for (const lyricist of lyricists) {
