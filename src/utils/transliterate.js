@@ -34,3 +34,33 @@ export function malayalamToIAST(text) {
     .map((line) => (line.trim() ? Sanscript.t(normalizeChillus(line), 'malayalam', 'iast') : ''))
     .join('\n')
 }
+
+// True when the string contains any Malayalam-script character.
+const hasMalayalam = (s) => /[ഀ-ൿ]/.test(s || '')
+
+// Capitalise the first letter of each word, preserving IAST diacritics
+// (ā, ṛ, ṣ … are single code points, so toUpperCase works on them directly).
+const titleCaseIAST = (s) => s.replace(/\S+/g, (w) => w.charAt(0).toUpperCase() + w.slice(1))
+
+/**
+ * Produce a proper IAST (diacritic) title for a bhajan.
+ *  - Title written in Malayalam script  → transliterate the title itself.
+ *  - Title already romanised            → transliterate the first line of the
+ *    Malayalam lyrics, so the stored title still carries proper IAST.
+ *  - No Malayalam available             → return the title unchanged.
+ * The result is title-cased (Ādiba O Raṅga) to match the existing title style.
+ */
+export function toIASTTitle(title, malayalamLyrics = '') {
+  const t = (title || '').trim()
+  if (hasMalayalam(t)) {
+    return titleCaseIAST(malayalamToIAST(t).trim()) || t
+  }
+  const firstLine = String(malayalamLyrics || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .find(Boolean)
+  if (firstLine && hasMalayalam(firstLine)) {
+    return titleCaseIAST(malayalamToIAST(firstLine).trim()) || t
+  }
+  return t
+}

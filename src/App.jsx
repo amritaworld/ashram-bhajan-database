@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { supabase } from './config/supabase'
 import Header from './components/Header'
 import Login from './pages/Login'
@@ -14,6 +14,15 @@ import ContributorManagement from './pages/ContributorManagement'
 import Spinner from './components/Spinner'
 import { DialogHost } from './components/Dialog'
 import './App.css'
+
+// Re-key BhajanForm by the route's bhajan id (or "new") so React remounts it
+// with fresh state when navigating edit → "Add Bhajan" (or between bhajans).
+// Without this, both routes render the same component instance and the old
+// bhajan's data — and its id — would carry over, breaking the new form.
+function BhajanFormRoute(props) {
+  const { id } = useParams()
+  return <BhajanForm key={id || 'new'} {...props} />
+}
 
 function App() {
   const [user, setUser] = useState(null)
@@ -57,8 +66,8 @@ function App() {
           {user ? (
             <>
               <Route path="/dashboard" element={<Dashboard user={user} userRole={userRole} />} />
-              <Route path="/bhajan/new" element={<BhajanForm user={user} userRole={userRole} />} />
-              <Route path="/bhajan/:id/edit" element={<BhajanForm user={user} userRole={userRole} />} />
+              <Route path="/bhajan/new" element={<BhajanFormRoute user={user} userRole={userRole} />} />
+              <Route path="/bhajan/:id/edit" element={<BhajanFormRoute user={user} userRole={userRole} />} />
               <Route path="/import" element={(userRole === 'admin' || userRole === 'contributor') ? <BulkImport user={user} /> : <Navigate to="/dashboard" />} />
               {/* Local-only tool: never reachable on the deployed Vercel app */}
               <Route path="/audio-convert" element={(userRole === 'admin' || userRole === 'contributor') ? <AudioConvert user={user} /> : <Navigate to="/dashboard" />} />

@@ -84,6 +84,9 @@ export async function parseDocx(file) {
 // Slug used for the bhajans.bhajan_id column, mirroring BhajanForm's generator.
 export function generateBhajanId(name) {
   return name
+    // Fold IAST diacritics to ASCII (ā→a, ṛ→r, ṣ→s …) so titles carrying
+    // diacritics still yield a clean a–z slug instead of dropping letters.
+    .normalize('NFKD').replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, '-')

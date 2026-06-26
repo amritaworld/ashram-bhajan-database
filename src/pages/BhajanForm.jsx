@@ -9,7 +9,7 @@ import AutoTextarea from '../components/AutoTextarea'
 import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
 import { showAlert, showConfirm } from '../components/Dialog'
-import { malayalamToIAST } from '../utils/transliterate'
+import { malayalamToIAST, toIASTTitle } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
@@ -186,6 +186,9 @@ function BhajanForm({ userRole }) {
 
   const generateBhajanId = (bhajanName) => {
     return bhajanName
+      // Fold IAST diacritics to ASCII (ā→a, ṛ→r, ṣ→s …) so titles carrying
+      // diacritics still yield a clean a–z slug instead of dropping letters.
+      .normalize('NFKD').replace(/[̀-ͯ]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, '-')
@@ -475,7 +478,13 @@ function BhajanForm({ userRole }) {
     if (silent) setAutoSaveStatus('saving')
     else setLoading(true)
     try {
-      const generatedBhajanId = bhajanId || generateBhajanId(name)
+      // New bhajans: store the title in IAST. Malayalam-script titles are
+      // transliterated directly; romanised titles take IAST from the first
+      // Malayalam lyrics line. Existing bhajans keep their title untouched so
+      // autosave never rewrites a name mid-edit.
+      const nameToSave = id ? name : toIASTTitle(name, lyrics_malayalam)
+      if (!id && nameToSave !== name) setName(nameToSave)
+      const generatedBhajanId = bhajanId || generateBhajanId(nameToSave)
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
       const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
 
@@ -505,7 +514,7 @@ function BhajanForm({ userRole }) {
         const { error: updateError } = await supabase
           .from('bhajans')
           .update({
-            name, theme, language, ...ragaTalaFields,
+            name: nameToSave, theme, language, ...ragaTalaFields,
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
             year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
@@ -529,7 +538,7 @@ function BhajanForm({ userRole }) {
           .from('bhajans')
           .insert([{
             bhajan_id: uniqueBhajanId,
-            name, theme, language, ...ragaTalaFields,
+            name: nameToSave, theme, language, ...ragaTalaFields,
             duration_minutes: duration_minutes ? parseFloat(duration_minutes) : null,
             year_of_recording: year_of_recording ? parseInt(year_of_recording) : null,
             lyrics: JSON.stringify(lyricsObj),
@@ -579,10 +588,10 @@ function BhajanForm({ userRole }) {
       // Activity log: record creation once, and at most one "updated" entry per
       // editing session (so frequent autosaves don't spam the log).
       if (!id) {
-        logActivity(savedId, 'created', `Created “${name}”`)
+        logActivity(savedId, 'created', `Created “${nameToSave}”`)
         loggedThisSessionRef.current = true
       } else if (!loggedThisSessionRef.current) {
-        logActivity(savedId, 'updated', `Updated “${name}”`)
+        logActivity(savedId, 'updated', `Updated “${nameToSave}”`)
         loggedThisSessionRef.current = true
       }
 

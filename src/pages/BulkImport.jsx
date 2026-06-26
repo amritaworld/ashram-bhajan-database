@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import { parseDocx, generateBhajanId } from '../utils/parseDocx'
+import { toIASTTitle } from '../utils/transliterate'
 import { enrichBhajan } from '../utils/excelEnrich'
 import { firstStanza, firstLineKey, stanzaSimilarity } from '../utils/iast'
 import Spinner from '../components/Spinner'
@@ -216,11 +217,14 @@ function BulkImport({ user }) {
       if (p.parseError) {
         return { ...p, status: 'error', messages: [p.parseError] }
       }
-      const title = (p.data.title || '').trim()
+      const rawTitle = (p.data.title || '').trim()
       const messages = []
-      if (!title) {
+      if (!rawTitle) {
         return { ...p, status: 'error', messages: ['No Title section found'] }
       }
+      // Store the title in IAST: Malayalam-script titles are transliterated
+      // directly; romanised titles take IAST from the first Malayalam line.
+      const title = toIASTTitle(rawTitle, p.data.lyrics_malayalam)
 
       const base = generateBhajanId(title) || 'bhajan'
       let slug = base
