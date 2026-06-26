@@ -10,6 +10,7 @@ import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
 import { showAlert, showConfirm, showToast } from '../components/Dialog'
 import { malayalamToIAST, toIASTTitle } from '../utils/transliterate'
+import { matchSpacing } from '../utils/iast'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
 
@@ -658,8 +659,10 @@ function BhajanForm({ userRole }) {
     const re = new RegExp(escapeRegExp(findText), matchCase ? 'g' : 'gi')
     const next = lyrics_malayalam.replace(re, replaceText)
     setLyricsMalayalam(next)
-    // Keep the English (IAST) field in step unless it was hand-edited.
+    // Keep the English (IAST) field in step: re-transliterate when auto, else
+    // mirror the Malayalam spacing onto the manually-edited English.
     if (!englishManual) setLyricsEnglish(malayalamToIAST(next))
+    else if (lyrics_english.trim()) setLyricsEnglish(matchSpacing(next, lyrics_english))
     // Keep the auto-generated Name in step too, unless it was hand-edited.
     if (!nameManual) setName(toIASTTitle('', next))
   }
@@ -863,8 +866,10 @@ function BhajanForm({ userRole }) {
             onChange={(e) => {
               const mal = e.target.value
               setLyricsMalayalam(mal)
-              // Auto-fill the English (IAST) field until it's hand-edited.
+              // Auto-fill the English (IAST) field until it's hand-edited; once
+              // manual, still mirror the Malayalam stanza spacing onto it.
               if (!englishManual) setLyricsEnglish(malayalamToIAST(mal))
+              else if (lyrics_english.trim()) setLyricsEnglish(matchSpacing(mal, lyrics_english))
               // Auto-generate the IAST Name from the first Malayalam line until
               // the Name is hand-edited (new bhajans only — existing are manual).
               if (!nameManual) setName(toIASTTitle('', mal))
@@ -915,7 +920,18 @@ function BhajanForm({ userRole }) {
         </div>
         <div className="form-group">
           <label>Malayalam</label>
-          <AutoTextarea value={meaning_malayalam} onChange={(e) => setMeaningMalayalam(e.target.value)} minHeight="5rem" placeholder="Malayalam meaning" />
+          <AutoTextarea
+            value={meaning_malayalam}
+            onChange={(e) => {
+              const mal = e.target.value
+              setMeaningMalayalam(mal)
+              // Mirror the Malayalam meaning's paragraph spacing onto the English
+              // meaning (words untouched) so the two stay visually aligned.
+              if (meaning_english.trim()) setMeaningEnglish(matchSpacing(mal, meaning_english))
+            }}
+            minHeight="5rem"
+            placeholder="Malayalam meaning"
+          />
         </div>
 
         <div className="form-group">

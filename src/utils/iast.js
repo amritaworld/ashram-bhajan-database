@@ -43,6 +43,33 @@ export function looseSearchKey(text) {
 }
 
 /**
+ * Re-flow `target` so its blank-line / line-break structure mirrors `source`,
+ * without changing any of target's words. Each non-blank line of source pulls
+ * the next non-blank line of target into that slot; blank lines in source
+ * become blank lines in the result. Any leftover target lines are appended.
+ *
+ * Used to keep the English (IAST) lyrics / English meaning laid out with the
+ * same stanza spacing as the Malayalam the user is editing. When the two have
+ * the same number of content lines (transliteration, or one-paragraph-per-
+ * stanza meanings) the spacing matches exactly; otherwise it degrades
+ * gracefully and never drops target content.
+ */
+export function matchSpacing(source, target) {
+  const src = String(source ?? '').split('\n')
+  const tgt = String(target ?? '').split('\n').filter((l) => l.trim() !== '')
+  if (tgt.length === 0) return target ?? ''
+  let ti = 0
+  const out = []
+  for (const line of src) {
+    if (line.trim() === '') out.push('')
+    else if (ti < tgt.length) out.push(tgt[ti++])
+    // source content line with no remaining target → emit nothing
+  }
+  while (ti < tgt.length) out.push(tgt[ti++]) // leftover target content
+  return out.join('\n')
+}
+
+/**
  * Normalize IAST format Sanskrit text to simple English for matching
  * IAST uses diacritical marks: ā ī ū ñ ş ṇ ṭ ḍ ṛ etc.
  * Convert to ASCII equivalents: a i u n s n t d r etc.
