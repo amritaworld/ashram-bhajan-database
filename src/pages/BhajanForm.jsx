@@ -8,7 +8,7 @@ import ContributorMultiSelect from '../components/ContributorMultiSelect'
 import AutoTextarea from '../components/AutoTextarea'
 import ComboBox from '../components/ComboBox'
 import BhajanSearch from '../components/BhajanSearch'
-import { showAlert, showConfirm } from '../components/Dialog'
+import { showAlert, showConfirm, showToast } from '../components/Dialog'
 import { malayalamToIAST, toIASTTitle } from '../utils/transliterate'
 
 const COMMON_LANGUAGES = ['Malayalam', 'Sanskrit', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Bengali', 'Marathi', 'Gujarati', 'Punjabi', 'Odia', 'English']
@@ -35,6 +35,9 @@ function BhajanForm({ userRole }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const [name, setName] = useState('')
+  // When true, the Name was hand-edited (or loaded from an existing bhajan), so
+  // we stop auto-generating it from the Malayalam lyrics as they're typed.
+  const [nameManual, setNameManual] = useState(false)
   const [theme, setTheme] = useState('')
   const [language, setLanguage] = useState('')
   const [originalBhajanId, setOriginalBhajanId] = useState('')
@@ -46,7 +49,7 @@ function BhajanForm({ userRole }) {
   const [talaRemarks, setTalaRemarks] = useState('')
   const [notes, setNotes] = useState('')
   const [duration_minutes, setDuration] = useState('')
-  const [year_of_recording, setYearOfRecording] = useState(new Date().getFullYear())
+  const [year_of_recording, setYearOfRecording] = useState('')
   const [lyrics_malayalam, setLyricsMalayalam] = useState('')
   const [lyrics_english, setLyricsEnglish] = useState('')
   // When true, the English (IAST) field was hand-edited/loaded, so we don't
@@ -252,6 +255,8 @@ function BhajanForm({ userRole }) {
     if (data) {
       setBhajanId(data.bhajan_id)
       setName(data.name || '')
+      // Existing record already has a title — never auto-overwrite it.
+      setNameManual(true)
       setTheme(data.theme || '')
       setLanguage(data.language || '')
       setOriginalBhajanId(data.original_bhajan_id || '')
@@ -272,7 +277,7 @@ function BhajanForm({ userRole }) {
       setTalaRemarks(talaRem)
       const notesVal = data.notes || ''
       const durationVal = data.duration_minutes || ''
-      const yearVal = data.year_of_recording || new Date().getFullYear()
+      const yearVal = data.year_of_recording || ''
       setNotes(notesVal)
       setDuration(durationVal)
       setYearOfRecording(yearVal)
@@ -478,12 +483,12 @@ function BhajanForm({ userRole }) {
     if (silent) setAutoSaveStatus('saving')
     else setLoading(true)
     try {
-      // New bhajans: store the title in IAST. Malayalam-script titles are
-      // transliterated directly; romanised titles take IAST from the first
-      // Malayalam lyrics line. Existing bhajans keep their title untouched so
-      // autosave never rewrites a name mid-edit.
-      const nameToSave = id ? name : toIASTTitle(name, lyrics_malayalam)
-      if (!id && nameToSave !== name) setName(nameToSave)
+      // The Name auto-fills in IAST from the Malayalam lyrics as they're typed.
+      // As a safety net, if a new bhajan's Name still holds Malayalam script
+      // (e.g. typed straight into the field), transliterate it to IAST on save.
+      // Otherwise keep the Name exactly as shown so manual edits are preserved.
+      const nameToSave = (!id && /[ഀ-ൿ]/.test(name)) ? toIASTTitle(name, lyrics_malayalam) : name
+      if (nameToSave !== name) setName(nameToSave)
       const generatedBhajanId = bhajanId || generateBhajanId(nameToSave)
       const lyricsObj = { malayalam: lyrics_malayalam, english: lyrics_english }
       const meaningObj = { malayalam: meaning_malayalam, english: meaning_english }
@@ -599,10 +604,13 @@ function BhajanForm({ userRole }) {
         setAutoSaveStatus('saved')
       } else if (!id) {
         // New bhajan just created — move into edit mode so autosave takes over
-        // and the user stays in the form.
+        // and the user stays in the form. The toast is rendered app-wide, so it
+        // survives this navigation.
+        showToast('Bhajan Saved')
         navigate(`/bhajan/${savedId}/edit`)
       } else {
         setAutoSaveStatus('saved')
+        showToast('Bhajan Saved')
       }
       return true
     } catch (err) {
@@ -652,6 +660,8 @@ function BhajanForm({ userRole }) {
     setLyricsMalayalam(next)
     // Keep the English (IAST) field in step unless it was hand-edited.
     if (!englishManual) setLyricsEnglish(malayalamToIAST(next))
+    // Keep the auto-generated Name in step too, unless it was hand-edited.
+    if (!nameManual) setName(toIASTTitle('', next))
   }
 
   return (
@@ -660,8 +670,13 @@ function BhajanForm({ userRole }) {
         <h1>{id ? 'Edit Bhajan' : 'Add Bhajan'}</h1>
 
         <div className="form-group">
-          <label>Name *</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bhajan name" />
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>Name *</span>
+            {!nameManual && lyrics_malayalam.trim() && (
+              <small style={{ color: '#888', fontWeight: 400 }}>Auto-generated (IAST) from Malayalam — edit to override</small>
+            )}
+          </label>
+          <input value={name} onChange={(e) => { setName(e.target.value); setNameManual(true) }} placeholder="Bhajan name (auto-fills from Malayalam lyrics)" />
         </div>
 
         <div className="form-row">
@@ -850,6 +865,9 @@ function BhajanForm({ userRole }) {
               setLyricsMalayalam(mal)
               // Auto-fill the English (IAST) field until it's hand-edited.
               if (!englishManual) setLyricsEnglish(malayalamToIAST(mal))
+              // Auto-generate the IAST Name from the first Malayalam line until
+              // the Name is hand-edited (new bhajans only — existing are manual).
+              if (!nameManual) setName(toIASTTitle('', mal))
             }}
             minHeight="9rem"
             placeholder="Malayalam lyrics"

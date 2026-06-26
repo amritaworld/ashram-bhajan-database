@@ -23,6 +23,15 @@ const CONTRIBUTOR_ROLES = [
   { value: 'singer', label: 'Singer' },
 ]
 
+// Parse a stored bhajans.lyrics value (JSON string or object) into its parts.
+const parseLyrics = (raw) => {
+  try { return typeof raw === 'string' ? JSON.parse(raw) : (raw || {}) } catch { return {} }
+}
+// First non-empty line of a multi-line string (trimmed).
+const firstLine = (s) => String(s || '').split('\n').map((l) => l.trim()).find(Boolean) || ''
+// The Malayalam "title": the opening line of the Malayalam lyrics (pallavi).
+const malayalamTitle = (b) => firstLine(parseLyrics(b.lyrics).malayalam)
+
 // Format a timestamp as DD-MM-YY for the "last updated" line.
 const formatDate = (ts) => {
   if (!ts) return ''
@@ -609,7 +618,14 @@ function Dashboard({ user, userRole }) {
                 aria-label={`Select ${bhajan.name}`}
               />
               <div className="bhajan-info">
-                <h3>{bhajan.name}</h3>
+                {malayalamTitle(bhajan) ? (
+                  <div className="bhajan-titles">
+                    <h3 className="bhajan-title-mal">{malayalamTitle(bhajan)}</h3>
+                    {bhajan.name && <p className="bhajan-title-iast">{bhajan.name}</p>}
+                  </div>
+                ) : (
+                  <h3>{bhajan.name}</h3>
+                )}
                 <div className="bhajan-meta">
                   {bhajan.theme && (
                     <div className="meta-group">

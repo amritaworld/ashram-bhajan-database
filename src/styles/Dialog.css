@@ -87,6 +87,42 @@
   border-color: #3a3a44;
 }
 
+/* Centered, auto-dismissing success toast (e.g. "Bhajan Saved") */
+.toast-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* non-blocking — clicks pass through */
+}
+
+.toast-box {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.6rem;
+  background: var(--surface, #141820);
+  border: 1px solid var(--border, #222936);
+  border-radius: var(--radius-card, 12px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+  color: var(--text, #f5f5f5);
+  font-size: 1.05rem;
+  font-weight: 600;
+  animation: toast-pop 180ms ease-out;
+}
+
+.toast-icon {
+  color: #4caf50;
+  font-size: 1.5rem;
+}
+
+@keyframes toast-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @keyframes dialog-fade {
   from { opacity: 0; }
   to { opacity: 1; }

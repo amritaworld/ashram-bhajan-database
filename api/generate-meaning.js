@@ -103,6 +103,40 @@ async function logUsage(token, row) {
   }
 }
 
+// Gemini occasionally returns 503 (overloaded) / 429 / 500 under load. Retry
+// these transient statuses with exponential backoff before giving up. Non-
+// transient responses (and the final attempt) are returned as-is.
+const RETRY_STATUS = new Set([429, 500, 503, 504])
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+async function callGeminiWithRetry(apiKey, prompt, attempts = 4) {
+  let last
+  for (let i = 0; i < attempts; i++) {
+    try {
+      last = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              thinkingConfig: { thinkingBudget: 0 },
+            },
+          }),
+        }
+      )
+      if (last.ok || !RETRY_STATUS.has(last.status)) return last
+    } catch (e) {
+      last = null // network error — retry too
+    }
+    if (i < attempts - 1) await sleep(600 * 2 ** i) // 600ms, 1.2s, 2.4s
+  }
+  // Exhausted retries: synthesize a 503-like response if the last attempt threw.
+  return last || { ok: false, status: 503, text: async () => 'Gemini unreachable' }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' })
 
@@ -130,27 +164,20 @@ export default async function handler(req, res) {
 
   const prompt = PROMPT.replace('{lang}', lang).replace('{lyrics}', lyrics)
   try {
-    const gr = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-      }
-    )
+    const gr = await callGeminiWithRetry(apiKey, prompt)
     if (!gr.ok) {
       const t = await gr.text()
       await logUsage(token, {
         user_email: user.email || null, feature: 'generate_meaning', model: MODEL,
         prompt_tokens: 0, output_tokens: 0, cost_inr: 0, status: 'error',
       })
-      return send(res, 502, { error: `Gemini error ${gr.status}`, detail: t.slice(0, 300) })
+      // 503/429/500 from Gemini mean it's overloaded — surface a friendly,
+      // actionable message instead of a raw status code.
+      const overloaded = [429, 500, 503, 504].includes(gr.status)
+      const error = overloaded
+        ? 'The AI service is busy right now. Please wait a moment and try again.'
+        : `Gemini error ${gr.status}`
+      return send(res, 502, { error, detail: t.slice(0, 300) })
     }
     const data = await gr.json()
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
