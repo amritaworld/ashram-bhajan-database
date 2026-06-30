@@ -307,6 +307,58 @@ h1, h2, h3, h4, h5, h6 {
 /* Floating save bar — sits in the gutter to the RIGHT of the form card,
    vertically centred and always visible while scrolling. Outside the form,
    never overlapping its fields. */
+/* Prev/next bhajan navigation — circular buttons vertically centred on each
+   side of the edit form, so you can jump between bhajans without the Dashboard. */
+.bhajan-nav-arrow {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid #2c333f;
+  background: rgba(17, 17, 20, 0.92);
+  color: #d6a84f;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  transition: background 160ms ease, transform 160ms ease, border-color 160ms ease;
+}
+
+.bhajan-nav-arrow:hover {
+  background: #1c2230;
+  border-color: #d6a84f;
+  transform: translateY(-50%) scale(1.08);
+}
+
+.bhajan-nav-arrow .material-symbols-outlined {
+  font-size: 1.9rem;
+}
+
+.bhajan-nav-arrow.prev {
+  left: 1.25rem;
+}
+
+.bhajan-nav-arrow.next {
+  right: 1.25rem;
+}
+
+@media (max-width: 1240px) {
+  /* Save bar moves to the bottom here, so keep the arrows clear of it. */
+  .bhajan-nav-arrow {
+    top: auto;
+    bottom: 1.4rem;
+    transform: none;
+  }
+  .bhajan-nav-arrow:hover {
+    transform: scale(1.08);
+  }
+}
+
 .floating-save-bar {
   position: fixed;
   /* Hug the right edge of the 900px-wide centred form card (50% + 450px),

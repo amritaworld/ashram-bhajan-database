@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { supabase } from '../config/supabase'
 import AudioPlayer from '../components/AudioPlayer'
 import TagInput from '../components/TagInput'
@@ -35,6 +35,11 @@ const makeSnapshot = (v) => JSON.stringify({
 function BhajanForm({ userRole }) {
   const navigate = useNavigate()
   const { id } = useParams()
+  const location = useLocation()
+  // Ordered list of bhajan ids for the prev/next arrows. Passed from the
+  // Dashboard (so it matches the filtered/sorted list the user was viewing);
+  // falls back to all bhajans in the same alphabetical order on direct visits.
+  const [navOrder, setNavOrder] = useState(location.state?.order || null)
   const [name, setName] = useState('')
   // When true, the Name was hand-edited (or loaded from an existing bhajan), so
   // we stop auto-generating it from the Malayalam lyrics as they're typed.
@@ -106,6 +111,36 @@ function BhajanForm({ userRole }) {
     loadSuggestions()
     if (id) loadBhajan()
   }, [id])
+
+  // Build the prev/next order on direct visits (no list handed over from the
+  // Dashboard) — every bhajan, alphabetical by name, matching the Dashboard default.
+  useEffect(() => {
+    if (navOrder || !id) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.from('bhajans').select('id, name')
+      if (cancelled || !data) return
+      const sorted = [...data].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+      )
+      setNavOrder(sorted.map((b) => b.id))
+    })()
+    return () => { cancelled = true }
+  }, [id, navOrder])
+
+  // Adjacent bhajans for the floating prev/next arrows.
+  const navIndex = navOrder ? navOrder.indexOf(id) : -1
+  const prevId = navIndex > 0 ? navOrder[navIndex - 1] : null
+  const nextId = navIndex >= 0 && navIndex < navOrder.length - 1 ? navOrder[navIndex + 1] : null
+  const goToBhajan = async (targetId) => {
+    if (!targetId) return
+    // Flush any pending edits first — moving on unmounts the form and would
+    // otherwise drop the debounced autosave.
+    if (id && lastSavedRef.current !== null && snapshot() !== lastSavedRef.current) {
+      await saveBhajan({ silent: true })
+    }
+    navigate(`/bhajan/${targetId}/edit`, { state: { order: navOrder } })
+  }
 
   const loadContributors = async () => {
     try {
@@ -633,7 +668,7 @@ function BhajanForm({ userRole }) {
   const handleBackdropClick = (e) => {
     // Leave only for clicks on the backdrop around the form — never when the
     // click is on the form card, the floating Save/Cancel bar, or a dialog.
-    if (e.target.closest('.form-card, .floating-save-bar, .dialog-overlay')) return
+    if (e.target.closest('.form-card, .floating-save-bar, .bhajan-nav-arrow, .dialog-overlay')) return
     leaveForm()
   }
 
@@ -1059,6 +1094,31 @@ function BhajanForm({ userRole }) {
         )}
 
       </div>
+
+      {/* Quick navigation to the previous / next bhajan without leaving the
+          edit view. Only while editing an existing bhajan. */}
+      {id && prevId && (
+        <button
+          type="button"
+          className="bhajan-nav-arrow prev"
+          onClick={() => goToBhajan(prevId)}
+          title="Previous bhajan (saves automatically)"
+          aria-label="Previous bhajan"
+        >
+          <span className="material-symbols-outlined">chevron_left</span>
+        </button>
+      )}
+      {id && nextId && (
+        <button
+          type="button"
+          className="bhajan-nav-arrow next"
+          onClick={() => goToBhajan(nextId)}
+          title="Next bhajan (saves automatically)"
+          aria-label="Next bhajan"
+        >
+          <span className="material-symbols-outlined">chevron_right</span>
+        </button>
+      )}
 
       <div className="floating-save-bar">
         {id && (

@@ -296,6 +296,12 @@ function Dashboard({ user, userRole }) {
       })
     }
 
+    // Default ordering: alphabetical by name (IAST title), case- and
+    // diacritic-insensitive so "Āvo" sorts with "a", not after "z".
+    filtered = [...filtered].sort((a, b) =>
+      (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+    )
+
     setFilteredBhajans(filtered)
     setCurrentPage(1)
   }
@@ -707,7 +713,10 @@ function Dashboard({ user, userRole }) {
                 <button onClick={() => setSelectedLyrics(bhajan)} className="row-action">
                   View Lyrics
                 </button>
-                <button onClick={() => navigate(`/bhajan/${bhajan.id}/edit`)} className="row-action">
+                <button
+                  onClick={() => navigate(`/bhajan/${bhajan.id}/edit`, { state: { order: filteredBhajans.map(b => b.id) } })}
+                  className="row-action"
+                >
                   Edit
                 </button>
                 <button onClick={() => handleDelete(bhajan.id)} className="row-action row-action-danger">

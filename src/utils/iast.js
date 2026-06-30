@@ -42,31 +42,72 @@ export function looseSearchKey(text) {
   return s
 }
 
+// Split text into stanzas: each is a run of non-blank lines, with `gapAfter` =
+// how many blank lines follow it before the next stanza. Leading/trailing
+// blank lines don't create empty stanzas.
+function toStanzas(text) {
+  const lines = String(text ?? '').split('\n')
+  const blocks = []
+  let cur = null
+  let pendingBlank = 0
+  for (const line of lines) {
+    if (line.trim() === '') {
+      if (cur) pendingBlank++
+    } else if (!cur) {
+      cur = { lines: [line], gapAfter: 0 }
+      blocks.push(cur)
+    } else if (pendingBlank > 0) {
+      cur.gapAfter = pendingBlank
+      cur = { lines: [line], gapAfter: 0 }
+      blocks.push(cur)
+      pendingBlank = 0
+    } else {
+      cur.lines.push(line)
+    }
+  }
+  return blocks
+}
+
 /**
- * Re-flow `target` so its blank-line / line-break structure mirrors `source`,
- * without changing any of target's words. Each non-blank line of source pulls
- * the next non-blank line of target into that slot; blank lines in source
- * become blank lines in the result. Any leftover target lines are appended.
+ * Re-flow `target` so its blank-line spacing mirrors `source`, without ever
+ * changing target's words. Used to keep the English (IAST) lyrics / English
+ * meaning laid out with the same stanza spacing as the Malayalam being edited.
  *
- * Used to keep the English (IAST) lyrics / English meaning laid out with the
- * same stanza spacing as the Malayalam the user is editing. When the two have
- * the same number of content lines (transliteration, or one-paragraph-per-
- * stanza meanings) the spacing matches exactly; otherwise it degrades
- * gracefully and never drops target content.
+ * Three tiers, most precise first, so it stays robust when the two languages
+ * don't break lines identically (the common real-world case):
+ *   1. Same number of non-blank lines → mirror blank lines line-by-line.
+ *   2. Same number of stanzas → mirror the blank-line gaps *between* stanzas,
+ *      keeping each target stanza's own line breaks intact.
+ *   3. Otherwise → leave target unchanged (never scramble it).
  */
 export function matchSpacing(source, target) {
-  const src = String(source ?? '').split('\n')
-  const tgt = String(target ?? '').split('\n').filter((l) => l.trim() !== '')
-  if (tgt.length === 0) return target ?? ''
-  let ti = 0
-  const out = []
-  for (const line of src) {
-    if (line.trim() === '') out.push('')
-    else if (ti < tgt.length) out.push(tgt[ti++])
-    // source content line with no remaining target → emit nothing
+  const srcLines = String(source ?? '').split('\n')
+  const tgtContent = String(target ?? '').split('\n').filter((l) => l.trim() !== '')
+  if (tgtContent.length === 0) return target ?? ''
+
+  // Tier 1: equal non-blank line counts → precise line-by-line mirror.
+  const srcContentCount = srcLines.filter((l) => l.trim() !== '').length
+  if (srcContentCount === tgtContent.length) {
+    let ti = 0
+    const out = []
+    for (const line of srcLines) out.push(line.trim() === '' ? '' : tgtContent[ti++])
+    return out.join('\n')
   }
-  while (ti < tgt.length) out.push(tgt[ti++]) // leftover target content
-  return out.join('\n')
+
+  // Tier 2: equal stanza counts → mirror the gaps between stanzas.
+  const srcBlocks = toStanzas(source)
+  const tgtBlocks = toStanzas(target)
+  if (srcBlocks.length >= 2 && srcBlocks.length === tgtBlocks.length) {
+    let out = ''
+    for (let i = 0; i < tgtBlocks.length; i++) {
+      out += tgtBlocks[i].lines.join('\n')
+      if (i < tgtBlocks.length - 1) out += '\n'.repeat(srcBlocks[i].gapAfter + 1)
+    }
+    return out
+  }
+
+  // Tier 3: structures don't correspond → don't touch the target.
+  return target ?? ''
 }
 
 /**
